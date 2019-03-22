@@ -111,15 +111,15 @@ class registration {
 	clazz: arbitrary_ctor;
 	base : arbitrary_ctor;
 	builder: base_class_builder;
-	serialize_func?: (obj: any) => any;
-	deserialize_func?: (obj: any) => any;
+	serialize_func?: (structured: any) => [any, boolean];
+	deserialize_func?: (structured: any, destructured: any) => boolean;
 	class_options?: cerealizer_options;
 
 	constructor(clazz: arbitrary_ctor,
 	            base: arbitrary_ctor,
 	            builder: base_class_builder,
-	            srlz?: (obj: any) => any,
-	            dsrlz?: (obj: any) => any,
+	            srlz?: (structured: any) => [any, boolean],
+	            dsrlz?: (structured: any, destructured: any) => boolean,
 	            class_options?: cerealizer_options) {
 		this.clazz = clazz;
 		this.base = base;
@@ -243,8 +243,8 @@ class cerealizer {
 
 	make_class_serializable(clazz: arbitrary_ctor,
 	                        options?: cerealizer_options,
-	                        srlz?: (obj: any) => any,
-	                        dsrlz?: (obj: any) => any
+	                        srlz?: (structured: any) => [any, boolean],
+	                        dsrlz?: (structured: any, destructured: any) => boolean
 	                        ) {
 		if(!this.known_classes.has(clazz.name)) {
 			const base = this.get_true_base(clazz);
@@ -493,7 +493,11 @@ class cerealizer {
 		destructured['X'] = reg.builder.serialize(structured, ctxt, reg);
 
 		if(reg.serialize_func) {
-			destructured['Y'] = reg.serialize_func(structured);
+			let [custom, perform_generic_serialization] = reg.serialize_func(structured);
+			destructured['Y'] = custom;
+			if(!perform_generic_serialization) {
+				return destructured;
+			}
 		}
 
 		let ignores: ignore_rule[] = [];
@@ -578,7 +582,10 @@ class cerealizer {
 		Object.setPrototypeOf(structured, reg.clazz.prototype ? reg.clazz.prototype : null);
 
 		if(reg.deserialize_func) {
-			Object.assign(structured, reg.deserialize_func(destructured));
+			let perform_generic_deserialization = reg.deserialize_func(structured, destructured['Y']);
+			if(!perform_generic_deserialization) {
+				return structured;
+			}
 		}
 
 		if(destructured.hasOwnProperty('p')) {
