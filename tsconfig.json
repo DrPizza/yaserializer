@@ -9,6 +9,7 @@
 		"preserveConstEnums": true,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
+		"declaration": true,
 		"moduleResolution": "node",
 		"sourceMap": true,
 		"outDir": "dist",
