@@ -738,7 +738,9 @@ var util = require('util');
 			Reflect.decorate([yaserializer.deserializer], Test, 'deserialize');
 			Reflect.decorate([yaserializer.deserialize_action], obj, 'rebuild');
 			
-			const reconstructed = reconstruct(ser, obj);
+			const serialized_form = new yaserializer.yaserializer([]).serialize(obj);
+			const reconstructed   = new yaserializer.yaserializer([]).deserialize(serialized_form);
+			
 			expect(reconstructed.cache).to.be.deep.equal(['rebuilt']);
 			expect(reconstructed.version).to.be.equal(20);
 			expect(reconstructed.field).to.be.equal('Hello, world! serialized form reconstituted');
