@@ -8,6 +8,10 @@ const deserialize_action_key = Symbol('cereralizer.deserialize_action');
 const serializer_key = Symbol('yaserializer.serializer');
 const deserializer_key = Symbol('yaserializer.deserializer');
 
+const registrations = Object.create(null);
+registrations.___ = undefined;
+delete registrations.___;
+
 class serialization_context {
 	invocation_options?: yaserializer_options;
 	index: any[];
@@ -636,25 +640,36 @@ class yaserializer {
 		return structured;
 	}
 
+	private attempt_dynamic_registration(class_name : string) {
+		if(!Object.prototype.hasOwnProperty.call(registrations, class_name)) {
+			return false;
+		}
+		let ctor = registrations[class_name];
+		if(Reflect && Reflect.getMetadata && null != Reflect.getMetadata(serializable_key, ctor)) {
+			const ignores          = Reflect.getMetadata(unserializable_key    , ctor);
+			const srlz_name        = Reflect.getMetadata(serializer_key        , ctor);
+			const desrlz_name      = Reflect.getMetadata(deserializer_key      , ctor);
+			const post_action_name = Reflect.getMetadata(deserialize_action_key, ctor);
+			
+			const options     = new yaserializer_options(ignores);
+			const post_action = post_action_name ? ctor.prototype[post_action_name] : undefined;
+			const srlz        = srlz_name        ? ctor          [srlz_name]        : undefined;
+			const desrlz      = desrlz_name      ? ctor          [desrlz_name]      : undefined;
+			if(post_action) {
+				options.on_post_deserialize = function(obj) { return post_action.bind(obj)(); };
+			}
+			this.make_class_serializable(ctor, options, srlz, desrlz);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	private serialize_object(structured: any, ctxt: serialization_context): any {
 		const class_name = this.get_object_class_name(structured);
 
 		if(class_name !== 'Object' && !this.known_classes.has(class_name)) {
-			if(Reflect.getMetadata && null != Reflect.getMetadata(serializable_key, structured.constructor)) {
-				const ignores          = Reflect.getMetadata(unserializable_key    , structured.constructor);
-				const srlz_name        = Reflect.getMetadata(serializer_key        , structured.constructor);
-				const desrlz_name      = Reflect.getMetadata(deserializer_key      , structured.constructor);
-				const post_action_name = Reflect.getMetadata(deserialize_action_key, structured.constructor);
-				
-				const options     = new yaserializer_options(ignores);
-				const post_action = post_action_name ? structured[post_action_name]        : undefined;
-				const srlz        = srlz_name        ? structured.constructor[srlz_name]   : undefined;
-				const desrlz      = desrlz_name      ? structured.constructor[desrlz_name] : undefined;
-				if(post_action) {
-					options.on_post_deserialize = function(obj) { return post_action.bind(obj)(); };
-				}
-				this.make_class_serializable(structured.constructor, options, srlz, desrlz);
-			} else {
+			if(!this.attempt_dynamic_registration(class_name)) {
 				throw new Error(`class ${class_name} is not registered`);
 			}
 		}
@@ -679,7 +694,9 @@ class yaserializer {
 		const object_data = ctxt.index[idx];
 		const class_name = object_data['c'];
 		if(!this.known_classes.has(class_name)) {
-			throw new Error(`class ${class_name} is not registered`);
+			if(!this.attempt_dynamic_registration(class_name)) {
+				throw new Error(`class ${class_name} is not registered`);
+			}
 		}
 		const reg = this.known_classes.get(class_name)!;
 		const structured = this.deserialize_arbitrary_object(object_data['v'], ctxt, reg);
@@ -810,6 +827,7 @@ class yaserializer {
 
 const serializable : ClassDecorator = (constructor: Function): void => {
 	Reflect.defineMetadata(serializable_key, {}, constructor);
+	registrations[constructor.name] = constructor;
 }
 
 const unserializable : PropertyDecorator = (target: Object, propertyKey: string | symbol): void => {
