@@ -712,6 +712,17 @@ var util = require('util');
 					this.version = 1;
 				}
 
+			//	@serializer
+				static serialize(obj) {
+					return [obj.field + ' serialized form', false];
+				}
+
+			//	@deserializer
+				static deserialize(structured, destructured) {
+					structured.field = destructured + ' reconstituted';
+					return false;
+				}
+
 			// 	@deserialize_action
 				rebuild() {
 					this.cache = ['rebuilt'];
@@ -723,12 +734,14 @@ var util = require('util');
 			Reflect.decorate([yaserializer.serializable], Test);
 			Reflect.decorate([yaserializer.unserializable], obj, 'cache');
 			Reflect.decorate([yaserializer.unserializable], obj, 'version');
+			Reflect.decorate([yaserializer.serializer], Test, 'serialize');
+			Reflect.decorate([yaserializer.deserializer], Test, 'deserialize');
 			Reflect.decorate([yaserializer.deserialize_action], obj, 'rebuild');
 			
 			const reconstructed = reconstruct(ser, obj);
 			expect(reconstructed.cache).to.be.deep.equal(['rebuilt']);
 			expect(reconstructed.version).to.be.equal(20);
-			expect(reconstructed.field).to.be.equal('Hello, world!');
+			expect(reconstructed.field).to.be.equal('Hello, world! serialized form reconstituted');
 			expect(reconstructed).to.be.instanceof(Test);
 		});
 	});

@@ -5,6 +5,8 @@ var util = require('util');
 const serializable_key = Symbol('yaserializer.serializable');
 const unserializable_key = Symbol('yaserializer.unserializable');
 const deserialize_action_key = Symbol('cereralizer.deserialize_action');
+const serializer_key = Symbol('yaserializer.serializer');
+const deserializer_key = Symbol('yaserializer.deserializer');
 
 class serialization_context {
 	invocation_options?: yaserializer_options;
@@ -639,14 +641,19 @@ class yaserializer {
 
 		if(class_name !== 'Object' && !this.known_classes.has(class_name)) {
 			if(Reflect.getMetadata && null != Reflect.getMetadata(serializable_key, structured.constructor)) {
-				const ignores = Reflect.getMetadata(unserializable_key, structured.constructor);
+				const ignores          = Reflect.getMetadata(unserializable_key    , structured.constructor);
+				const srlz_name        = Reflect.getMetadata(serializer_key        , structured.constructor);
+				const desrlz_name      = Reflect.getMetadata(deserializer_key      , structured.constructor);
 				const post_action_name = Reflect.getMetadata(deserialize_action_key, structured.constructor);
-				const options = new yaserializer_options(ignores);
-				const post_action = post_action_name ? structured[post_action_name] : undefined;
+				
+				const options     = new yaserializer_options(ignores);
+				const post_action = post_action_name ? structured[post_action_name]        : undefined;
+				const srlz        = srlz_name        ? structured.constructor[srlz_name]   : undefined;
+				const desrlz      = desrlz_name      ? structured.constructor[desrlz_name] : undefined;
 				if(post_action) {
 					options.on_post_deserialize = function(obj) { return post_action.bind(obj)(); };
 				}
-				this.make_class_serializable(structured.constructor, options);
+				this.make_class_serializable(structured.constructor, options, srlz, desrlz);
 			} else {
 				throw new Error(`class ${class_name} is not registered`);
 			}
@@ -819,10 +826,137 @@ const deserialize_action : MethodDecorator = (target: Object, propertyKey: strin
 	return descriptor;
 }
 
+const serializer : MethodDecorator = (target: Object, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<any>) => {
+	Reflect.defineMetadata(serializer_key, propertyKey, target);
+	return descriptor;
+}
+
+const deserializer : MethodDecorator = (target: Object, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<any>) => {
+	Reflect.defineMetadata(deserializer_key, propertyKey, target);
+	return descriptor;
+}
+
+class quintet_part {
+	major: string;
+	minor: string;
+	parts: string[];
+	
+	constructor(part: string) {
+		this.parts = part.split('/');
+		if(this.parts.length > 2) {
+			throw new Error(`bad quintet fragment: ${part}`);
+		}
+		this.parts = this.parts.map((value: string) => { return value.trim(); });
+		this.major = this.parts[0];
+		this.minor = this.parts.length == 2 ? this.parts[1] : '*';
+	}
+	
+	match(rhs: quintet_part) : boolean {
+		if(this.major == '*' || rhs.major == '*') {
+			return true;
+		}
+		if(this.major == rhs.major) {
+			if(this.minor == '*' || rhs.minor == '*') {
+				return true;
+			}
+			return this.minor == rhs.minor;
+		}
+		return false;
+	}
+	
+	as_raw_string(): string {
+		return this.parts.join('/');
+	}
+	
+	toString() : string { return this.as_raw_string(); }
+	
+	static compare(l: quintet_part, r: quintet_part) : number {
+		const sl = l.as_raw_string(), sr = r.as_raw_string();
+		return sl < sr ? -1
+		     : sl > sr ?  1
+		     :            0;
+	}
+}
+
+@serializable
+class quintet {
+	parts        : quintet_part[];
+
+	constructor(quin: string) {
+		let raw_parts = quin.toString().split(':');
+		if(raw_parts.length != 5) {
+			throw new Error(`bad quintet: ${quin.toString()}`);
+		}
+		this.parts = raw_parts.map((p: string) => {
+			return new quintet_part(p);
+		});
+	}
+
+	@unserializable
+	get platform      () { return this.parts[0]; }
+	@unserializable
+	get toolchain     () { return this.parts[1]; }
+	@unserializable
+	get type          () { return this.parts[2]; }
+	@unserializable
+	get arch          () { return this.parts[3]; }
+	@unserializable
+	get configuration () { return this.parts[4]; }
+
+	match(rhs: quintet): boolean {
+		for(let i = 0; i < 5; ++i) {
+			if(!this.parts[i].match(rhs.parts[i])) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	as_raw_string(): string {
+		return this.parts.map((p: quintet_part) => { return p.as_raw_string(); }).join(':');
+	}
+	
+	get [Symbol.toStringTag]() {
+		return this.as_raw_string();
+	}
+	
+	[util.inspect.custom](depth: number, options: any) {
+		return this.as_raw_string();
+	}
+	
+	toString() : string { return this.as_raw_string(); }
+	
+	static compare(l: quintet, r: quintet) : number {
+		for(let i = 0; i < 5; ++i) {
+			let cmp = quintet_part.compare(l.parts[i], r.parts[i]);
+			if(cmp != 0) {
+				return cmp;
+			}
+		}
+		return 0;
+	}
+
+	@serializer
+	static serialize(q: quintet) {
+		return [ q.as_raw_string(), false];
+	}
+	
+	@deserializer
+	static deserialize(structured: quintet, destructured: any) {
+		let q = new quintet(destructured as string);
+		structured.parts = q.parts;
+		return false;
+	}
+
+	static wildcard : quintet = new quintet('*:*:*:*:*');
+}
+
 export {
 	yaserializer,
 	yaserializer_options,
 	serializable,
 	unserializable,
+	serializer,
+	deserializer,
 	deserialize_action,
 };
