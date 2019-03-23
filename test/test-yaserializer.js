@@ -1,15 +1,15 @@
 // loosely based on https://github.com/erossignon/serialijse/blob/master/test/test_persistence.js
 // which is MIT licensed, the original author and copyright holder being erossignon
 
-var cerealizer = require('../dist/cerealizer.js');
+var yaserializer = require('../dist/yaserializer.js');
 var expect = require('chai').expect;
 var util = require('util');
 
 (function () {
 	'use strict';
 
-	function reconstruct(cer, obj, verbose) {
-		const serialized_form = cer.serialize(obj);
+	function reconstruct(ser, obj, verbose) {
+		const serialized_form = ser.serialize(obj);
 		if(verbose) {
 			console.log('===============');
 			console.log(util.inspect(obj, true, 12, true));
@@ -17,7 +17,7 @@ var util = require('util');
 			console.log(serialized_form);
 			console.log('---------------');
 		}
-		const reconstructed = cer.deserialize(serialized_form);
+		const reconstructed = ser.deserialize(serialized_form);
 		if(verbose) {
 			console.log(util.inspect(reconstructed, true, 12, true));
 			console.log('===============');
@@ -27,12 +27,12 @@ var util = require('util');
 
 	describe('basic data types', function()
 	{
-		const cer = new cerealizer.cerealizer([]);
+		const ser = new yaserializer.yaserializer([]);
 
 		it('should preserve numbers', function() {
 			const obj = 5;
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -40,7 +40,7 @@ var util = require('util');
 		it('should preserve strings', function() {
 			const obj = 'Hello, World!';
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -48,7 +48,7 @@ var util = require('util');
 		it('should preserve bigints', function() {
 			const obj = 12345678901234567890n;
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -56,7 +56,7 @@ var util = require('util');
 		it('should preserve booleans', function() {
 			const obj = true;
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -64,11 +64,11 @@ var util = require('util');
 
 	describe('magic values', function()
 	{
-		const cer = new cerealizer.cerealizer([]);
+		const ser = new yaserializer.yaserializer([]);
 		it('should preserve null', function() {
 			const obj = null;
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -76,7 +76,7 @@ var util = require('util');
 		it('should preserve undefined', function() {
 			var obj = undefined;
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(reconstructed).to.be.an('undefined');
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -84,7 +84,7 @@ var util = require('util');
 		it('should preserve NaN', function() {
 			var obj = NaN;
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(reconstructed).to.be.NaN;
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -92,7 +92,7 @@ var util = require('util');
 		it('should preserve Infinity', function() {
 			var obj = Infinity;
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(reconstructed).to.equal(Infinity);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -100,12 +100,12 @@ var util = require('util');
 
 	describe('fundamental objects', function()
 	{
-		const cer = new cerealizer.cerealizer([]);
+		const ser = new yaserializer.yaserializer([]);
 
 		it('should preserve Objects', function() {
 			const obj = new Object();
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -113,7 +113,7 @@ var util = require('util');
 		it('should preserve boxed Booleans', function() {
 			const obj = new Boolean(true);
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -121,7 +121,7 @@ var util = require('util');
 		it('should preserve boxed Numbers', function() {
 			const obj = new Number(5);
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -129,7 +129,7 @@ var util = require('util');
 		it('should preserve boxed Strings', function() {
 			const obj = new String('Hello');
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -137,7 +137,7 @@ var util = require('util');
 		it('should preserve RegExps', function() {
 			const obj = /\w+/g;
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -145,7 +145,7 @@ var util = require('util');
 		it('should preserve Dates', function() {
 			const obj = new Date();
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -153,7 +153,7 @@ var util = require('util');
 		it('should preserve Errors', function() {
 			const obj = new Error('this is an error');
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			// older versions of deep-eql only compare Errors by identity, not by value.
 			expect(reconstructed).to.be.instanceof(Error);
 			expect(obj.name).to.be.equal(reconstructed.name);
@@ -165,7 +165,7 @@ var util = require('util');
 		it('should preserve global symbol identity', function() {
 			const obj = Symbol.for('global');
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -173,26 +173,26 @@ var util = require('util');
 		it('should preserve well-known symbol identity', function() {
 			const obj = Symbol.unscopables;
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
 
 		it('should not preserve local symbols', function() {
 			const obj = Symbol('local');
-			expect(function() { return cer.serialize(obj); }).to.throw();
+			expect(function() { return ser.serialize(obj); }).to.throw();
 		});
 
 	});
 
 	describe('compound data types: arrays and POJOs', function()
 	{
-		const cer = new cerealizer.cerealizer([]);
+		const ser = new yaserializer.yaserializer([]);
 
 		it('should preserve arrays', function() {
 			const obj = [1, 2, , 4, 5];
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -200,7 +200,7 @@ var util = require('util');
 		it('should preserve ArrayBuffers', function() {
 			const obj = new ArrayBuffer(16);
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -208,7 +208,7 @@ var util = require('util');
 		it('should preserve heterogeneous arrays', function() {
 			const obj = [1, 'str', , 4, 12345678901234567890n];
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
@@ -219,7 +219,7 @@ var util = require('util');
 				Object.setPrototypeOf(obj, null);
 				obj.field = 'Hello';
 
-				const reconstructed = reconstruct(cer, obj);
+				const reconstructed = reconstruct(ser, obj);
 				expect(obj).to.deep.equal(reconstructed);
 				expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 			}
@@ -230,7 +230,7 @@ var util = require('util');
 			              sa: ['str1', 'str2'], na: [1, 2, 3], bia: [12345678901234567890n, 22345678901234567890n, 32345678901234567890n], ba: [false, true],
 			              mixed: [1, 'str', , 4, 12345678901234567890n, { a: 'a', b: 'b' } ]};
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 		});
 
@@ -250,18 +250,18 @@ var util = require('util');
 
 			expect(function() { return JSON.stringify(obj1); }).to.throw();
 
-			const reconstructed = reconstruct(cer, obj1);
+			const reconstructed = reconstruct(ser, obj1);
 			expect(obj1).to.be.deep.equal(reconstructed);
 		});
 	});
 
 	describe('functions', function () {
-		const cer = new cerealizer.cerealizer();
+		const ser = new yaserializer.yaserializer();
 
 		it('should serialize a normal function', function() {
 			const obj = function(arg) { console.log(`Hello, ${arg}`); };
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			// deep-eql does not seem to be able to compare functions directly
 			expect(reconstructed).to.be.instanceof(Function);
 			expect(obj.name).to.be.equal(reconstructed.name);
@@ -273,7 +273,7 @@ var util = require('util');
 		it('should serialize a Function object', function() {
 			const obj = new Function('a', 'b', 'return a + b;');
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			// deep-eql does not seem to be able to compare functions directly
 			expect(reconstructed).to.be.instanceof(Function);
 			expect(obj.name).to.be.equal(reconstructed.name);
@@ -285,7 +285,7 @@ var util = require('util');
 
 		it('should serialize an async function', function() {
 			const obj = async function(arg) { return await `Hello, ${arg}`; };
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			// deep-eql does not seem to be able to compare functions directly
 			expect(reconstructed).to.be.instanceof(Function);
 			expect(obj.name).to.be.equal(reconstructed.name);
@@ -297,7 +297,7 @@ var util = require('util');
 		it('should serialize generator function', function() {
 			const obj = function*(arg) { yield `Hello, ${arg}`; };
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			// deep-eql does not seem to be able to compare functions directly
 			expect(reconstructed).to.be.instanceof(Function);
 			expect(obj.name).to.be.equal(reconstructed.name);
@@ -309,7 +309,7 @@ var util = require('util');
 		it('should not serialize a native function', function() {
 			const obj = eval;
 
-			expect(function() { return cer.serialize(obj); }).to.throw();
+			expect(function() { return ser.serialize(obj); }).to.throw();
 		});
 
 	});
@@ -334,19 +334,19 @@ var util = require('util');
 			}
 		}
 
-		const cer = new cerealizer.cerealizer([LegacyClass, Color, Vehicle]);
+		const ser = new yaserializer.yaserializer([LegacyClass, Color, Vehicle]);
 
 		it('should preserve old-style classes', function() {
 			const obj = new LegacyClass('legacy');
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 		});
 
 		it('should preserve object classes', function () {
 			const obj = new Vehicle();
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(reconstructed).to.be.instanceof(Vehicle);
 			expect(obj).to.be.deep.equal(reconstructed);
 		});
@@ -357,7 +357,7 @@ var util = require('util');
 			obj[0].price = 95000;
 			obj[0].created_on = new Date('Wed, 04 May 1949 22:00:00 GMT');
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.be.deep.equal(reconstructed);
 		});
 
@@ -368,7 +368,7 @@ var util = require('util');
 			the_vehicle.created_on = new Date('Wed, 04 May 1949 22:00:00 GMT');
 
 			const obj = [the_vehicle, the_vehicle];
-			const reconstructed = reconstruct(cer, obj)
+			const reconstructed = reconstruct(ser, obj)
 
 			expect(obj).to.be.deep.equal(reconstructed);
 			expect(reconstructed[0]).to.be.equal(reconstructed[1]);
@@ -393,7 +393,7 @@ var util = require('util');
 				}
 			});
 
-			const rcer = new cerealizer.cerealizer([Rectangle]);
+			const rser = new yaserializer.yaserializer([Rectangle]);
 
 			var obj = new Rectangle();
 			obj.width = 10;
@@ -401,7 +401,7 @@ var util = require('util');
 			expect(obj.area).to.be.equal(100);
 			expect(obj.perimeter).to.be.equal(40);
 
-			const reconstructed = reconstruct(rcer, obj);
+			const reconstructed = reconstruct(rser, obj);
 
 			expect(obj).to.be.deep.equal(reconstructed);
 
@@ -416,7 +416,7 @@ var util = require('util');
 				uint32: new Int32Array([1, 2, 3, 5, 6, 10, 100])
 			};
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.be.deep.equal(reconstructed);
 		});
 		
@@ -427,7 +427,7 @@ var util = require('util');
 			obj.setUint32( 8, 0xcafebeef, true);
 			obj.setUint32(12, 0xdeadbabe, true);
 			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.be.deep.equal(reconstructed);
 		});
 
@@ -510,7 +510,7 @@ var util = require('util');
 					this.extension = 1;
 				}
 			};
-			const xcer = new cerealizer.cerealizer([XObject, XFunction, XArray, XNumber, XError, XRegExp, XBoolean, XMap, XSet, XDate, XArrayBuffer, XFloat32Array, XDataView]);
+			const xser = new yaserializer.yaserializer([XObject, XFunction, XArray, XNumber, XError, XRegExp, XBoolean, XMap, XSet, XDate, XArrayBuffer, XFloat32Array, XDataView]);
 
 			{
 				const xab = new XArrayBuffer(16);
@@ -528,7 +528,7 @@ var util = require('util');
 					new XFloat32Array([1.1, 2.2, 3.3, 5.5, 6.6, 10.01, 100.001]), xdv
 				];
 
-				const reconstructed = reconstruct(xcer, obj);
+				const reconstructed = reconstruct(xser, obj);
 				expect(obj).to.be.deep.equal(reconstructed);
 				
 				obj.forEach((value, idx) => {
@@ -539,7 +539,7 @@ var util = require('util');
 				const obj = [new XFunction('a', 'return a;'), new XError('msg')];
 
 				// deep-eql does not seem to be able to compare functions directly
-				const reconstructed = reconstruct(xcer, obj);
+				const reconstructed = reconstruct(xser, obj);
 				expect(reconstructed[0]).to.be.instanceof(Function);
 				expect(reconstructed[0]).to.be.instanceof(XFunction);
 				expect(obj[0].name).to.be.equal(reconstructed[0].name);
@@ -571,18 +571,18 @@ var util = require('util');
 					this.$someOtherStuff     = 0;
 					}
 			}
-			const global_options = new cerealizer.cerealizer_options(['$global_ignored']);
-			const cer = new cerealizer.cerealizer([], global_options);
+			const global_options = new yaserializer.yaserializer_options(['$global_ignored']);
+			const ser = new yaserializer.yaserializer([], global_options);
 
-			const class_options = new cerealizer.cerealizer_options([/\$class.*/]);
-			cer.make_class_serializable(ExcludedMembers, class_options);
+			const class_options = new yaserializer.yaserializer_options([/\$class.*/]);
+			ser.make_class_serializable(ExcludedMembers, class_options);
 
 			const obj = new ExcludedMembers();
 			obj._cache = [1, 2, 3];
 
-			const invocation_options = new cerealizer.cerealizer_options(['$invocation_ignored']);
-			const serialized_form = cer.serialize(obj, invocation_options);
-			const reconstructed = cer.deserialize(serialized_form);
+			const invocation_options = new yaserializer.yaserializer_options(['$invocation_ignored']);
+			const serialized_form = ser.serialize(obj, invocation_options);
+			const reconstructed = ser.deserialize(serialized_form);
 
 			expect('always included').to.be.equal(reconstructed.name);
 			expect(reconstructed.$invocation_ignored).to.be.an('undefined');
@@ -605,9 +605,9 @@ var util = require('util');
 				}
 			}
 	
-			const instance_options = new cerealizer.cerealizer_options();
-			const cer = new cerealizer.cerealizer([], instance_options);
-			const class_options = new cerealizer.cerealizer_options(
+			const instance_options = new yaserializer.yaserializer_options();
+			const ser = new yaserializer.yaserializer([], instance_options);
+			const class_options = new yaserializer.yaserializer_options(
 				[
 					'_cache'
 				],
@@ -615,12 +615,12 @@ var util = require('util');
 					obj.rebuild_cache();
 				}
 			);
-			cer.make_class_serializable(DeserializeAction, class_options);
+			ser.make_class_serializable(DeserializeAction, class_options);
 
 			const obj = new DeserializeAction();
 			obj._cache.push(36);
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(reconstructed._cache).to.be.deep.equal(['rebuild_cache has been called']);
 		});
 
@@ -639,8 +639,8 @@ var util = require('util');
 				}
 			}
 	
-			const cer = new cerealizer.cerealizer();
-			const options = new cerealizer.cerealizer_options(
+			const ser = new yaserializer.yaserializer();
+			const options = new yaserializer.yaserializer_options(
 				[
 					'_cache'
 				],
@@ -649,36 +649,36 @@ var util = require('util');
 					obj.rebuild_cache();
 				}
 			);
-			cer.make_class_serializable(PostDeserializeAction, options);
+			ser.make_class_serializable(PostDeserializeAction, options);
 
 			const obj = new PostDeserializeAction();
 			obj._cache.push(36);
 
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(reconstructed._cache).to.be.deep.equal(['rebuild_cache has been called']);
 		});
 	});
 
 	describe('general utility', function () {
-		const cer = new cerealizer.cerealizer([]);
-
+		const ser = new yaserializer.yaserializer([]);
+			
 		it('should let me perform final encoding in different ways', function() {
 			const BSON = require('bson');
-			const instance_options = new cerealizer.cerealizer_options();
+			const instance_options = new yaserializer.yaserializer_options();
 			instance_options.perform_encode = BSON.serialize;
 			instance_options.perform_decode = BSON.deserialize;
-			const bcer = new cerealizer.cerealizer([], instance_options);
+			const bser = new yaserializer.yaserializer([], instance_options);
 			
 			const obj = { d: new Date(), s: 'string', arr: [1, 2, 3] };
 			
-			const reconstructed = reconstruct(bcer, obj);
+			const reconstructed = reconstruct(bser, obj);
 			expect(reconstructed).to.be.deep.equal(obj);
 		});
 	
 		it('should let me perform final encoding in more complex ways', function() {
 			const BSON = require('bson');
 			const zlib = require('zlib');
-			const instance_options = new cerealizer.cerealizer_options();
+			const instance_options = new yaserializer.yaserializer_options();
 			instance_options.perform_encode = function(obj) {
 				const serial_form = BSON.serialize(obj);
 				return zlib.deflateSync(serial_form);
@@ -687,7 +687,7 @@ var util = require('util');
 				const serial_form = zlib.inflateSync(obj);
 				return BSON.deserialize(serial_form);
 			};
-			const bcer = new cerealizer.cerealizer([], instance_options);
+			const bcer = new yaserializer.yaserializer([], instance_options);
 			
 			const obj = { d: new Date(), s: 'string', arr: [1, 2, 3] };
 			
@@ -720,14 +720,12 @@ var util = require('util');
 			};
 			const obj = new Test();
 			
-			Reflect.decorate([cerealizer.serializable], Test);
-			Reflect.decorate([cerealizer.unserializable], obj, 'cache');
-			Reflect.decorate([cerealizer.unserializable], obj, 'version');
-			Reflect.decorate([cerealizer.deserialize_action], obj, 'rebuild');
+			Reflect.decorate([yaserializer.serializable], Test);
+			Reflect.decorate([yaserializer.unserializable], obj, 'cache');
+			Reflect.decorate([yaserializer.unserializable], obj, 'version');
+			Reflect.decorate([yaserializer.deserialize_action], obj, 'rebuild');
 			
-			const cer = new cerealizer.cerealizer([]);
-			
-			const reconstructed = reconstruct(cer, obj);
+			const reconstructed = reconstruct(ser, obj);
 			expect(reconstructed.cache).to.be.deep.equal(['rebuilt']);
 			expect(reconstructed.version).to.be.equal(20);
 			expect(reconstructed.field).to.be.equal('Hello, world!');

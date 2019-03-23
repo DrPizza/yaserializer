@@ -2,17 +2,17 @@ import "reflect-metadata";
 
 var util = require('util');
 
-const serializable_key = Symbol('cerealizer.serializable');
-const unserializable_key = Symbol('cerealizer.unserializable');
+const serializable_key = Symbol('yaserializer.serializable');
+const unserializable_key = Symbol('yaserializer.unserializable');
 const deserialize_action_key = Symbol('cereralizer.deserialize_action');
 
 class serialization_context {
-	invocation_options?: cerealizer_options;
+	invocation_options?: yaserializer_options;
 	index: any[];
 	objects: any[];
 	post_deserialization_actions: (() => any)[];
 
-	constructor(options?: cerealizer_options) {
+	constructor(options?: yaserializer_options) {
 		this.invocation_options = options;
 		this.index = [];
 		this.objects = [];
@@ -72,7 +72,7 @@ class placeholder {
 type label = (string | number | symbol);
 type ignore_rule = label | RegExp;
 
-class cerealizer_options {
+class yaserializer_options {
 	ignored: ignore_rule[];
 	on_deserialize?: (obj: any) => any;
 	on_post_deserialize?: (obj: any) => any;
@@ -113,14 +113,14 @@ class registration {
 	builder: base_class_builder;
 	serialize_func?: (structured: any) => [any, boolean];
 	deserialize_func?: (structured: any, destructured: any) => boolean;
-	class_options?: cerealizer_options;
+	class_options?: yaserializer_options;
 
 	constructor(clazz: arbitrary_ctor,
 	            base: arbitrary_ctor,
 	            builder: base_class_builder,
 	            srlz?: (structured: any) => [any, boolean],
 	            dsrlz?: (structured: any, destructured: any) => boolean,
-	            class_options?: cerealizer_options) {
+	            class_options?: yaserializer_options) {
 		this.clazz = clazz;
 		this.base = base;
 		this.builder = builder;
@@ -132,7 +132,7 @@ class registration {
 
 type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array;
 
-class cerealizer {
+class yaserializer {
 	static typed_array_types = [
 		Int8Array, Uint8Array, Uint8ClampedArray, Int16Array, Uint16Array, Int32Array, Uint32Array, Float32Array, Float64Array, BigInt64Array, BigUint64Array
 	];
@@ -141,13 +141,13 @@ class cerealizer {
 		Array, ArrayBuffer, DataView, Function, Date, Map, Set, Error, RegExp, Number, Boolean, String, Symbol
 	];
 
-	static potential_base_classes = Array.prototype.concat(cerealizer.typed_array_types, cerealizer.special_classes);
+	static potential_base_classes = Array.prototype.concat(yaserializer.typed_array_types, yaserializer.special_classes);
 
 	private base_class_builders: Map<arbitrary_ctor, base_class_builder>;
 	private known_classes: Map<string, registration>;
-	private global_options?: cerealizer_options;
+	private global_options?: yaserializer_options;
 
-	constructor(known_classes?: arbitrary_ctor[], options?: cerealizer_options) {
+	constructor(known_classes?: arbitrary_ctor[], options?: yaserializer_options) {
 		this.known_classes = new Map<string, registration>();
 		this.base_class_builders = new Map<arbitrary_ctor, base_class_builder>();
 
@@ -218,7 +218,7 @@ class cerealizer {
 		}
 
 		if(options) {
-			this.global_options = new cerealizer_options();
+			this.global_options = new yaserializer_options();
 			Object.assign(this.global_options, options);
 		}
 	}
@@ -233,7 +233,7 @@ class cerealizer {
 	// I have to do it this way because the internal property [[Class]] is unmodifiable. Most other things 
 	// that matter can just be overwritten.
 	private get_true_base(clazz: any) : any {
-		for(let base of cerealizer.potential_base_classes) {
+		for(let base of yaserializer.potential_base_classes) {
 			if(this.is_base_of(base, clazz)) {
 				return base;
 			}
@@ -242,7 +242,7 @@ class cerealizer {
 	}
 
 	make_class_serializable(clazz: arbitrary_ctor,
-	                        options?: cerealizer_options,
+	                        options?: yaserializer_options,
 	                        srlz?: (structured: any) => [any, boolean],
 	                        dsrlz?: (structured: any, destructured: any) => boolean
 	                        ) {
@@ -486,7 +486,7 @@ class cerealizer {
 		const is_array_like        = this.is_base_of(Array, structured.constructor);
 		const is_array_buffer_like = this.is_base_of(ArrayBuffer, structured.constructor);
 		const is_string_like       = this.is_base_of(String, structured.constructor);
-		const is_typed_array_like  = cerealizer.typed_array_types.reduce<boolean>((previous: boolean, current: any) => {
+		const is_typed_array_like  = yaserializer.typed_array_types.reduce<boolean>((previous: boolean, current: any) => {
 			return previous || this.is_base_of(current, structured.constructor);
 		}, false);
 
@@ -641,7 +641,7 @@ class cerealizer {
 			if(Reflect.getMetadata && null != Reflect.getMetadata(serializable_key, structured.constructor)) {
 				const ignores = Reflect.getMetadata(unserializable_key, structured.constructor);
 				const post_action_name = Reflect.getMetadata(deserialize_action_key, structured.constructor);
-				const options = new cerealizer_options(ignores);
+				const options = new yaserializer_options(ignores);
 				const post_action = post_action_name ? structured[post_action_name] : undefined;
 				if(post_action) {
 					options.on_post_deserialize = function(obj) { return post_action.bind(obj)(); };
@@ -772,7 +772,7 @@ class cerealizer {
 		}
 	}
 
-	serialize(structured: any, options?: cerealizer_options): string {
+	serialize(structured: any, options?: yaserializer_options): string {
 		const ctxt = new serialization_context(options);
 		const destructured = this.serialize_primitive(structured, ctxt);
 		const deserialized = { 'parts': ctxt.index, 'root': destructured };
@@ -783,7 +783,7 @@ class cerealizer {
 		}
 	}
 
-	deserialize(data: any, options?: cerealizer_options) : any {
+	deserialize(data: any, options?: yaserializer_options) : any {
 		const decode_function = (this.global_options && this.global_options.perform_decode) ? this.global_options.perform_decode
 		                      :                                                               JSON.parse;
 		const raw_object : any = decode_function(data);
@@ -820,8 +820,8 @@ const deserialize_action : MethodDecorator = (target: Object, propertyKey: strin
 }
 
 export {
-	cerealizer,
-	cerealizer_options,
+	yaserializer,
+	yaserializer_options,
 	serializable,
 	unserializable,
 	deserialize_action,
