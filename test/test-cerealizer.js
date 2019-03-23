@@ -1,7 +1,7 @@
 // loosely based on https://github.com/erossignon/serialijse/blob/master/test/test_persistence.js
 // which is MIT licensed, the original author and copyright holder being erossignon
 
-var cerealizer = require('../index.js');
+var cerealizer = require('../dist/cerealizer.js');
 var expect = require('chai').expect;
 var util = require('util');
 

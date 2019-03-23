@@ -819,10 +819,10 @@ const deserialize_action : MethodDecorator = (target: Object, propertyKey: strin
 	return descriptor;
 }
 
-module.exports = {
-	cerealizer: cerealizer,
-	cerealizer_options: cerealizer_options,
-	serializable: serializable,
-	unserializable: unserializable,
-	deserialize_action: deserialize_action,
-}
+export {
+	cerealizer,
+	cerealizer_options,
+	serializable,
+	unserializable,
+	deserialize_action,
+};

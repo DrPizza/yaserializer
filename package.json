@@ -2,7 +2,7 @@
   "name": "cerealizer",
   "version": "0.0.1",
   "description": "JavaScript serialization library that can handle cycles and strives to preserve user-defined classes.",
-  "main": "index.js",
+  "main": "dist/cerealizer.js",
   "engines": {
     "node": ">=11.11.0"
   },
@@ -26,10 +26,6 @@
     "watch": "concurrently -k -p \"[{name}]\" -n \"TypeScript\" -c \"cyan.bold\" \"npm run watch-ts\"",
     "watch-ts": "tsc -w",
     "test": "./node_modules/.bin/mocha --reporter spec"
-  },
-  "testling": {
-    "harness": "mocha-bdd",
-    "files": "test/*.js"
   },
   "keywords": [
     "serialization",
