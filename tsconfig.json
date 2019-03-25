@@ -1,11 +1,13 @@
 {
 	"compilerOptions": {
 		"module": "commonjs",
-		"esModuleInterop": true,
+		"esModuleInterop": false,
 		"target": "es2017",
-		"lib": ["es2018", "es2017", "esnext.array"],
+		"lib": ["es2018", "es2017", "esnext.array", "esnext.symbol"],
+		"noEmitHelpers": true,
 		"noImplicitAny": true,
 		"strict": true,
+		"noImplicitReturns" : true,
 		"preserveConstEnums": true,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
@@ -19,7 +21,8 @@
 				"node_modules/*",
 				"src/types/*"
 			]
-		}
+		},
+		"pretty": true
 	},
 	"include": [
 		"lib/**/*"

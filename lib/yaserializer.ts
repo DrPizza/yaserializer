@@ -182,13 +182,15 @@ class yaserializer {
 		this.base_class_builders.set(BigInt64Array     , new base_class_builder(this.serialize_typed_array_like .bind(this) , this.deserialize_typed_array_like .bind(this)));
 		this.base_class_builders.set(BigUint64Array    , new base_class_builder(this.serialize_typed_array_like .bind(this) , this.deserialize_typed_array_like .bind(this)));
 		
-		const generator_function =       function*() { yield 0; }; // I can't directly access these types
-		const async_function     = async function () {          };
+		const generator_function       = eval('(      function*() { yield 0; })'); // I can't directly access these types
+		const async_function           = eval('(async function () {          })'); // and I need to protect them from TypeScript
+		const async_generator_function = eval('(async function*() { yield 0; })');
 
 		this.make_class_serializable(Object           );
 		this.make_class_serializable(Function         );
-		this.make_class_serializable(generator_function.constructor as arbitrary_ctor); // but I can work around it
-		this.make_class_serializable(async_function    .constructor as arbitrary_ctor);
+		this.make_class_serializable(generator_function      .constructor as arbitrary_ctor); // but I can work around it
+		this.make_class_serializable(async_function          .constructor as arbitrary_ctor);
+		this.make_class_serializable(async_generator_function.constructor as arbitrary_ctor);
 		this.make_class_serializable(Array            );
 		this.make_class_serializable(ArrayBuffer      );
 		this.make_class_serializable(DataView         );
@@ -281,7 +283,6 @@ class yaserializer {
 	}
 
 	private serialize_symbol(obj: symbol): any {
-		// @ts-ignore
 		const desc = obj.description;
 		if(/^Symbol\./.test(desc)) {
 			return { 'wk': desc.replace(/^Symbol\./, '') };

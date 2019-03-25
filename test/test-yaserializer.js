@@ -294,8 +294,20 @@ var util = require('util');
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
 
-		it('should serialize generator function', function() {
+		it('should serialize a generator function', function() {
 			const obj = function*(arg) { yield `Hello, ${arg}`; };
+
+			const reconstructed = reconstruct(ser, obj);
+			// deep-eql does not seem to be able to compare functions directly
+			expect(reconstructed).to.be.instanceof(Function);
+			expect(obj.name).to.be.equal(reconstructed.name);
+			expect(obj.length).to.be.equal(reconstructed.length);
+			expect(obj.toString()).to.be.equal(reconstructed.toString());
+			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+		});
+
+		it('should serialize an async generator function', function() {
+			const obj = async function*(arg) { yield `Hello, ${arg}`; };
 
 			const reconstructed = reconstruct(ser, obj);
 			// deep-eql does not seem to be able to compare functions directly
