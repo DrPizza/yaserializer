@@ -13,7 +13,7 @@
 			"args": ["test/**/*.js", "--no-timeouts"],
 			"cwd": "${workspaceRoot}",
 			"runtimeExecutable": null,
-						"preLaunchTask": "tsc: build - tsconfig.json",
+			"preLaunchTask": "tsc: build - tsconfig.json",
 			"outFiles": [
 				"${workspaceFolder}/dist/**/*.js"
 			]

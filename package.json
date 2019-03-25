@@ -11,14 +11,15 @@
     "url": "https://github.com/DrPizza/yaserializer"
   },
   "devDependencies": {
-    "@types/node": "^11.11.3",
+    "@types/node": "^11.11.6",
     "bson": "^4.0.2",
     "chai": "^4.2.0",
     "concurrently": "^4.1.0",
     "deep-eql": "^4.0.0",
     "mocha": "^6.0.2",
+    "nyc": "^13.3.0",
     "should": "^13.2.3",
-    "typescript": "^3.3.3333"
+    "typescript": "^3.3.4000"
   },
   "scripts": {
     "build": "npm run build-ts",

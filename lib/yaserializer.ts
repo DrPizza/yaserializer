@@ -568,9 +568,6 @@ class yaserializer {
 			if(desc[prop].enumerable === true) {
 				delete desc[prop].enumerable;
 			}
-			if(desc[prop].configurable === true) {
-				delete desc[prop].configurable;
-			}
 		}
 
 		let prop_array = [];
@@ -606,9 +603,6 @@ class yaserializer {
 				}
 				if(!desc[prop].hasOwnProperty('enumerable')) {
 					desc[prop].enumerable = true;
-				}
-				if(!desc[prop].hasOwnProperty('configurable')) {
-					desc[prop].configurable = true;
 				}
 				
 				if(desc[prop].hasOwnProperty('value')) {
