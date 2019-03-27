@@ -64,7 +64,25 @@ var util = require('util');
 
 	describe('magic values', function()
 	{
+		it('should preserve 0', function() {
+			const obj = 0;
+			
+			const reconstructed = reconstruct(ser, obj);
+			expect(obj).to.equal(reconstructed);
+			expect(1 / obj).to.equal(1 / reconstructed);
+			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+		});
+
 		const ser = new yaserializer.yaserializer([]);
+		it('should preserve -0', function() {
+			const obj = -0;
+			
+			const reconstructed = reconstruct(ser, obj);
+			expect(obj).to.equal(reconstructed);
+			expect(1 / obj).to.equal(1 / reconstructed);
+			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+		});
+
 		it('should preserve null', function() {
 			const obj = null;
 			
@@ -96,6 +114,15 @@ var util = require('util');
 			expect(reconstructed).to.equal(Infinity);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
+	
+		it('should preserve -Infinity', function() {
+			var obj = -Infinity;
+
+			const reconstructed = reconstruct(ser, obj);
+			expect(reconstructed).to.equal(-Infinity);
+			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+		});
+
 	});
 
 	describe('fundamental objects', function()
@@ -215,8 +242,7 @@ var util = require('util');
 
 		it('should handle null prototypes', function() {
 			{
-				const obj = {};
-				Object.setPrototypeOf(obj, null);
+				const obj = Object.create(null);
 				obj.field = 'Hello';
 
 				const reconstructed = reconstruct(ser, obj);
@@ -327,10 +353,6 @@ var util = require('util');
 	});
 
 	describe('classes', function () {
-		function LegacyClass(name) {
-			this.name = name;
-		}
-
 		class Color {
 			constructor(colorName) {
 				this.name = colorName;
@@ -346,13 +368,40 @@ var util = require('util');
 			}
 		}
 
-		const ser = new yaserializer.yaserializer([LegacyClass, Color, Vehicle]);
+		const ser = new yaserializer.yaserializer([Color, Vehicle]);
 
 		it('should preserve old-style classes', function() {
-			const obj = new LegacyClass('legacy');
+			function Shape(x, y) {
+				this.x = x;
+				this.y = y;
+			}
+			Shape.prototype.move = function (x, y) {
+				this.x += x;
+				this.y += y;
+			}
+
+			function Circle(x, y, r) {
+				Shape.call(this, x, y);
+				this.r = r;
+			}
+
+			Circle.prototype = Object.create(Shape.prototype);
+			Circle.prototype.constructor = Circle;
+
+			Circle.prototype.area = function () {
+				return this.r * 2 * Math.PI;
+			}
 			
-			const reconstructed = reconstruct(ser, obj);
-			expect(obj).to.deep.equal(reconstructed);
+			let obj1 = new Circle(1, 2, 3);
+			let obj2 = new Shape(4, 5);
+			
+			const cser = new yaserializer.yaserializer([Shape, Circle]);
+			
+			let reconstructed1 = reconstruct(cser, obj1, false);
+			let reconstructed2 = reconstruct(cser, obj2, false);
+			
+			expect(obj1).to.be.deep.equal(reconstructed1);
+			expect(obj2).to.be.deep.equal(reconstructed2);
 		});
 
 		it('should preserve object classes', function () {
@@ -361,6 +410,52 @@ var util = require('util');
 			const reconstructed = reconstruct(ser, obj);
 			expect(reconstructed).to.be.instanceof(Vehicle);
 			expect(obj).to.be.deep.equal(reconstructed);
+		});
+
+		it('should let me mix ES5 and ES6 classes', function() {
+			function Shape(x, y) {
+				this.x = x;
+				this.y = y;
+			}
+			Shape.prototype.move = function (x, y) {
+				this.x += x;
+				this.y += y;
+			}
+
+			function Circle(x, y, r) {
+				Shape.call(this, x, y);
+				this.r = r;
+			}
+
+			Circle.prototype = Object.create(Shape.prototype);
+			Circle.prototype.constructor = Circle;
+
+			Circle.prototype.area = function () {
+				return this.r * 2 * Math.PI;
+			}
+			
+			class RedCircle extends Circle {
+				constructor(...args) {
+					super(...args);
+					
+					this.colour = 'red';
+				}
+			}
+			
+			let obj1 = new Circle(1, 2, 3);
+			let obj2 = new Shape(4, 5);
+			let obj3 = new RedCircle(6, 7, 8);
+			
+			const cser = new yaserializer.yaserializer([Shape, Circle, RedCircle]);
+			
+			let reconstructed1 = reconstruct(cser, obj1, false);
+			let reconstructed2 = reconstruct(cser, obj2, false);
+			let reconstructed3 = reconstruct(cser, obj3, false);
+			
+			
+			expect(obj1).to.be.deep.equal(reconstructed1);
+			expect(obj2).to.be.deep.equal(reconstructed2);
+			expect(obj3).to.be.deep.equal(reconstructed3);
 		});
 
 		it('should preserve arrays of objects', function () {

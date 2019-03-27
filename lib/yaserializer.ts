@@ -184,7 +184,7 @@ class yaserializer {
 		
 		const generator_function       = eval('(      function*() { yield 0; })'); // I can't directly access these types
 		const async_function           = eval('(async function () {          })'); // and I need to protect them from TypeScript
-		const async_generator_function = eval('(async function*() { yield 0; })');
+		const async_generator_function = eval('(async function*() { yield 0; })'); // when targetting older than es2019.
 
 		this.make_class_serializable(Object           );
 		this.make_class_serializable(Function         );
@@ -202,6 +202,12 @@ class yaserializer {
 		this.make_class_serializable(Map              );
 		this.make_class_serializable(Set              );
 		this.make_class_serializable(Error            );
+		this.make_class_serializable(EvalError        );
+		this.make_class_serializable(RangeError       );
+		this.make_class_serializable(ReferenceError   );
+		this.make_class_serializable(SyntaxError      );
+		this.make_class_serializable(TypeError        );
+		this.make_class_serializable(URIError         );
 		this.make_class_serializable(Int8Array        );
 		this.make_class_serializable(Uint8Array       );
 		this.make_class_serializable(Uint8ClampedArray);
@@ -740,8 +746,14 @@ class yaserializer {
 		if(typeof structured === 'number' && Number.isNaN(structured)) {
 			return { 'm': 'NaN' };
 		}
-		if(typeof structured === 'number' && !Number.isFinite(structured)) {
+		if(typeof structured === 'number' && !Number.isFinite(structured) && structured > 0) {
 			return { 'm': 'Infinity' };
+		}
+		if(typeof structured === 'number' && !Number.isFinite(structured) && structured < 0) {
+			return { 'm': '-Infinity' };
+		}
+		if(typeof structured === 'number' && structured === 0 && (1 / structured) == -Infinity) {
+			return { 'm': '-0' };
 		}
 
 		switch(typeof structured) {
@@ -772,6 +784,8 @@ class yaserializer {
 				case 'null'     : return null;
 				case 'NaN'      : return NaN;
 				case 'Infinity' : return Infinity;
+				case '-Infinity': return -Infinity;
+				case '-0'       : return -0;
 				}
 			} else if(destructured.hasOwnProperty('s')) {
 				return String(destructured['s']);
