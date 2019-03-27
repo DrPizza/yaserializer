@@ -13,3 +13,93 @@ Custom classes must be registered. Serialization does not preserve the actual cl
 As with any JavaScript serialization library, there's some things that can't be serialized: closures and the forthcoming private properties. TC39 is opting for hard privacy over deep cloning, so you'll need to write custom serialization code to handle classes that have true private data, whether that privacy is using the classic closure approach, or the new `#` prefix on property names. There are hooks provided to set custom serializers for this very scenario.
 
 I've only written and tested on Node 11.12, which is current at the time of writing. I'm using TypeScript, because it really does make writing JavaScript less painful. There's preliminary support for decorators, too, using the `Reflect` metadata API. With this, you can write self-registering classes that can mark fields as non-serialized, plumb in custom serialization methods, and set up post-deserialization functions.
+
+# Some code snippets I guess
+
+Ignores:
+
+```javascript
+
+class ExcludedMembers {
+	constructor() {
+		this.name                = 'always included';
+		this.$invocation_ignored = 'excluded by invocation options';
+		this.$class_ignored      = 'excluded by class options';
+		this.$global_ignored     = 'excluded by global options';
+		this._cache              = [];
+		this.$someOtherStuff     = 0;
+		}
+}
+
+// every use of this serializer object will ignore members called $global_ignored
+const global_options = new yas.yaserializer_options(['$global_ignored']);
+const ser = new yas.yaserializer([], global_options);
+
+// this particular class will have its members starting $class ignored. But other
+// classes registered with this serializer can have them preserved.
+const class_options = new yas.yaserializer_options([/\$class.*/]);
+ser.make_class_serializable(ExcludedMembers, class_options);
+
+const obj = new ExcludedMembers();
+obj._cache = [1, 2, 3];
+
+// this particular call to serialize will ignore members named $invocation_ignored.
+// But other calls to this serializer can have them preserved.
+const invocation_options = new yas.yaserializer_options(['$invocation_ignored']);
+const serialized_form = ser.serialize(obj, invocation_options);
+const reconstructed = ser.deserialize(serialized_form);
+
+```
+
+Decorators, custom serialization methods, in TypeScript:
+
+```typescript
+
+@yas.serializable
+class Test {
+ 	field: string;
+
+ 	@yas.unserializable
+ 	cache: any[];
+
+ 	@yas.unserializable
+ 	version: number;
+
+	constructor() {
+		this.field = 'Hello, world!';
+		this.cache = [];
+		this.version = 1;
+	}
+
+	// serializer method returns a pair. the first element 
+	// contains the serialized data using only those data
+	// types and structures that are compatible with JSON.
+	// the second is 'true' to augment the custom serialization
+	// with the usual brute force property-by-property
+	// serialization, 'false' to skip it and rely only on 
+	// the custom serialized data.
+	@yas.serializer
+	static serialize(obj) {
+		return [obj.field + ' serialized form', false];
+	}
+
+	// structured is a hollowed out object of the right type
+	// but without any of its members. destructured is the 
+	// custom serialized data created by the serializer method.
+	// return true to also use built-in propery-by-property
+	// deserialization; false to skip it.
+	@yas.deserializer
+	static deserialize(structured, destructured) {
+		structured.field = destructured + ' reconstituted';
+		return false;
+	}
+
+ 	// executed after the entire object graph is deserialized. 
+ 	@yas.deserialize_action
+	rebuild() {
+		this.cache = ['rebuilt'];
+		this.version = 20;
+	}
+};
+
+```

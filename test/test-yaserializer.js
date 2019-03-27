@@ -1,7 +1,7 @@
 // loosely based on https://github.com/erossignon/serialijse/blob/master/test/test_persistence.js
 // which is MIT licensed, the original author and copyright holder being erossignon
 
-var yaserializer = require('../dist/yaserializer.js');
+var yas = require('../dist/yaserializer.js');
 var expect = require('chai').expect;
 var util = require('util');
 
@@ -27,7 +27,7 @@ var util = require('util');
 
 	describe('basic data types', function()
 	{
-		const ser = new yaserializer.yaserializer([]);
+		const ser = new yas.yaserializer([]);
 
 		it('should preserve numbers', function() {
 			const obj = 5;
@@ -73,7 +73,7 @@ var util = require('util');
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
 
-		const ser = new yaserializer.yaserializer([]);
+		const ser = new yas.yaserializer([]);
 		it('should preserve -0', function() {
 			const obj = -0;
 			
@@ -127,7 +127,7 @@ var util = require('util');
 
 	describe('fundamental objects', function()
 	{
-		const ser = new yaserializer.yaserializer([]);
+		const ser = new yas.yaserializer([]);
 
 		it('should preserve Objects', function() {
 			const obj = new Object();
@@ -214,7 +214,7 @@ var util = require('util');
 
 	describe('compound data types: arrays and POJOs', function()
 	{
-		const ser = new yaserializer.yaserializer([]);
+		const ser = new yas.yaserializer([]);
 
 		it('should preserve arrays', function() {
 			const obj = [1, 2, , 4, 5];
@@ -282,7 +282,7 @@ var util = require('util');
 	});
 
 	describe('functions', function () {
-		const ser = new yaserializer.yaserializer();
+		const ser = new yas.yaserializer();
 
 		it('should serialize a normal function', function() {
 			const obj = function(arg) { console.log(`Hello, ${arg}`); };
@@ -368,7 +368,7 @@ var util = require('util');
 			}
 		}
 
-		const ser = new yaserializer.yaserializer([Color, Vehicle]);
+		const ser = new yas.yaserializer([Color, Vehicle]);
 
 		it('should preserve old-style classes', function() {
 			function Shape(x, y) {
@@ -395,7 +395,7 @@ var util = require('util');
 			let obj1 = new Circle(1, 2, 3);
 			let obj2 = new Shape(4, 5);
 			
-			const cser = new yaserializer.yaserializer([Shape, Circle]);
+			const cser = new yas.yaserializer([Shape, Circle]);
 			
 			let reconstructed1 = reconstruct(cser, obj1, false);
 			let reconstructed2 = reconstruct(cser, obj2, false);
@@ -446,7 +446,7 @@ var util = require('util');
 			let obj2 = new Shape(4, 5);
 			let obj3 = new RedCircle(6, 7, 8);
 			
-			const cser = new yaserializer.yaserializer([Shape, Circle, RedCircle]);
+			const cser = new yas.yaserializer([Shape, Circle, RedCircle]);
 			
 			let reconstructed1 = reconstruct(cser, obj1, false);
 			let reconstructed2 = reconstruct(cser, obj2, false);
@@ -500,7 +500,7 @@ var util = require('util');
 				}
 			});
 
-			const rser = new yaserializer.yaserializer([Rectangle]);
+			const rser = new yas.yaserializer([Rectangle]);
 
 			var obj = new Rectangle();
 			obj.width = 10;
@@ -617,7 +617,7 @@ var util = require('util');
 					this.extension = 1;
 				}
 			};
-			const xser = new yaserializer.yaserializer([XObject, XFunction, XArray, XNumber, XError, XRegExp, XBoolean, XMap, XSet, XDate, XArrayBuffer, XFloat32Array, XDataView]);
+			const xser = new yas.yaserializer([XObject, XFunction, XArray, XNumber, XError, XRegExp, XBoolean, XMap, XSet, XDate, XArrayBuffer, XFloat32Array, XDataView]);
 
 			{
 				const xab = new XArrayBuffer(16);
@@ -678,16 +678,16 @@ var util = require('util');
 					this.$someOtherStuff     = 0;
 					}
 			}
-			const global_options = new yaserializer.yaserializer_options(['$global_ignored']);
-			const ser = new yaserializer.yaserializer([], global_options);
+			const global_options = new yas.yaserializer_options(['$global_ignored']);
+			const ser = new yas.yaserializer([], global_options);
 
-			const class_options = new yaserializer.yaserializer_options([/\$class.*/]);
+			const class_options = new yas.yaserializer_options([/\$class.*/]);
 			ser.make_class_serializable(ExcludedMembers, class_options);
 
 			const obj = new ExcludedMembers();
 			obj._cache = [1, 2, 3];
 
-			const invocation_options = new yaserializer.yaserializer_options(['$invocation_ignored']);
+			const invocation_options = new yas.yaserializer_options(['$invocation_ignored']);
 			const serialized_form = ser.serialize(obj, invocation_options);
 			const reconstructed = ser.deserialize(serialized_form);
 
@@ -712,9 +712,9 @@ var util = require('util');
 				}
 			}
 	
-			const instance_options = new yaserializer.yaserializer_options();
-			const ser = new yaserializer.yaserializer([], instance_options);
-			const class_options = new yaserializer.yaserializer_options(
+			const instance_options = new yas.yaserializer_options();
+			const ser = new yas.yaserializer([], instance_options);
+			const class_options = new yas.yaserializer_options(
 				[
 					'_cache'
 				],
@@ -746,8 +746,8 @@ var util = require('util');
 				}
 			}
 	
-			const ser = new yaserializer.yaserializer();
-			const options = new yaserializer.yaserializer_options(
+			const ser = new yas.yaserializer();
+			const options = new yas.yaserializer_options(
 				[
 					'_cache'
 				],
@@ -767,14 +767,14 @@ var util = require('util');
 	});
 
 	describe('general utility', function () {
-		const ser = new yaserializer.yaserializer([]);
+		const ser = new yas.yaserializer([]);
 			
 		it('should let me perform final encoding in different ways', function() {
 			const BSON = require('bson');
-			const instance_options = new yaserializer.yaserializer_options();
+			const instance_options = new yas.yaserializer_options();
 			instance_options.perform_encode = BSON.serialize;
 			instance_options.perform_decode = BSON.deserialize;
-			const bser = new yaserializer.yaserializer([], instance_options);
+			const bser = new yas.yaserializer([], instance_options);
 			
 			const obj = { d: new Date(), s: 'string', arr: [1, 2, 3] };
 			
@@ -785,7 +785,7 @@ var util = require('util');
 		it('should let me perform final encoding in more complex ways', function() {
 			const BSON = require('bson');
 			const zlib = require('zlib');
-			const instance_options = new yaserializer.yaserializer_options();
+			const instance_options = new yas.yaserializer_options();
 			instance_options.perform_encode = function(obj) {
 				const serial_form = BSON.serialize(obj);
 				return zlib.deflateSync(serial_form);
@@ -794,7 +794,7 @@ var util = require('util');
 				const serial_form = zlib.inflateSync(obj);
 				return BSON.deserialize(serial_form);
 			};
-			const bcer = new yaserializer.yaserializer([], instance_options);
+			const bcer = new yas.yaserializer([], instance_options);
 			
 			const obj = { d: new Date(), s: 'string', arr: [1, 2, 3] };
 			
@@ -838,15 +838,15 @@ var util = require('util');
 			};
 			const obj = new Test();
 			
-			Reflect.decorate([yaserializer.serializable], Test);
-			Reflect.decorate([yaserializer.unserializable], obj, 'cache');
-			Reflect.decorate([yaserializer.unserializable], obj, 'version');
-			Reflect.decorate([yaserializer.serializer], Test, 'serialize');
-			Reflect.decorate([yaserializer.deserializer], Test, 'deserialize');
-			Reflect.decorate([yaserializer.deserialize_action], obj, 'rebuild');
+			Reflect.decorate([yas.serializable], Test);
+			Reflect.decorate([yas.unserializable], obj, 'cache');
+			Reflect.decorate([yas.unserializable], obj, 'version');
+			Reflect.decorate([yas.serializer], Test, 'serialize');
+			Reflect.decorate([yas.deserializer], Test, 'deserialize');
+			Reflect.decorate([yas.deserialize_action], obj, 'rebuild');
 			
-			const serialized_form = new yaserializer.yaserializer([]).serialize(obj);
-			const reconstructed   = new yaserializer.yaserializer([]).deserialize(serialized_form);
+			const serialized_form = new yas.yaserializer([]).serialize(obj);
+			const reconstructed   = new yas.yaserializer([]).deserialize(serialized_form);
 			
 			expect(reconstructed.cache).to.be.deep.equal(['rebuilt']);
 			expect(reconstructed.version).to.be.equal(20);
