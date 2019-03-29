@@ -16,14 +16,14 @@ class serialization_context {
 	invocation_options?: yaserializer_options;
 	index: any[];
 	objects: any[];
-	classnames: string[];
+	string_table: string[];
 	post_deserialization_actions: (() => any)[];
 
 	constructor(options?: yaserializer_options) {
 		this.invocation_options = options;
 		this.index = [];
 		this.objects = [];
-		this.classnames = [];
+		this.string_table = [];
 		this.post_deserialization_actions = [];
 	}
 
@@ -31,11 +31,11 @@ class serialization_context {
 		return this.objects.indexOf(obj);
 	}
 	
-	find_class_index(classname: string) : number {
-		let idx = this.classnames.indexOf(classname);
+	find_string_index(classname: string) : number {
+		let idx = this.string_table.indexOf(classname);
 		if(idx === -1) {
-			idx = this.classnames.length;
-			this.classnames.push(classname);
+			idx = this.string_table.length;
+			this.string_table.push(classname);
 		}
 		return idx
 	}
@@ -470,7 +470,7 @@ class yaserializer {
 
 	private serialize_function_like(structured: Function, ctxt: serialization_context, reg: registration): any {
 		if(!/\[native code\]/.test(structured.toString())) {
-			return [structured.name, structured.toString()];
+			return [this.serialize_primitive(structured.name, ctxt), structured.toString()];
 		} else {
 			throw new Error(`can't serialize native functions`);
 		}
@@ -479,11 +479,43 @@ class yaserializer {
 	private deserialize_function_like(destructured: any, ctxt: serialization_context, reg: registration): Function {
 		const strict_environment = !destructured.hasOwnProperty('caller');
 		const prelude = strict_environment ? `'use strict'; ` : '';
-		const name = destructured[0] && destructured[0] !== 'anonymous' ? `const ${destructured[0]} = ` : '(';
-		const body = destructured[1];
-		const tail = destructured[0] && destructured[0] !== 'anonymous' ? `; ${destructured[0]};` : ')';
+		const raw_name = this.deserialize_primitive(destructured[0], ctxt);
+		
+		if(raw_name.indexOf(' ') === -1 && raw_name.indexOf('.') === -1) {
+			const name = raw_name && raw_name !== 'anonymous' ? `const ${raw_name} = ` : '(';
+			const body = destructured[1];
+			const tail = raw_name && raw_name !== 'anonymous' ? `; ${raw_name};` : ')';
+			return (1, eval)(prelude + name + body + tail) as Function;
+		}
+		let function_header = 'function';
+		switch(reg.clazz.name) {
+		case 'Function':
+			function_header = 'function';
+			break;
+		case 'AsyncFunction':
+			function_header = 'async function';
+			break;
+		case 'GeneratorFunction':
+			function_header = 'function*';
+			break;
+		case 'AsyncGeneratorFunction':
+			function_header = 'async function*';
+		}
+		
+		const name = 'const x = ';
+		const body = destructured[1].substring(destructured[1].indexOf(raw_name) + raw_name.length);
+		const tail = '; x;';
 		// eval in global scope
-		return (1, eval)(prelude + name + body + tail) as Function;
+		const fn = (1, eval)(prelude + name + function_header + body + tail) as Function;
+		
+		const desc = Object.getOwnPropertyDescriptor(fn, 'name')!;
+		desc.writable = true;
+		Object.defineProperty(fn, 'name', desc);
+		desc.value = raw_name;
+		Object.defineProperty(fn, 'name', desc);
+		desc.writable = false;
+		Object.defineProperty(fn, 'name', desc);
+		return fn;
 	}
 
 	private serialize_array_buffer_like(structured: ArrayBuffer, ctxt: serialization_context, reg: registration) : any {
@@ -550,7 +582,8 @@ class yaserializer {
 
 		const desc = Object.getOwnPropertyDescriptors(structured);
 		const pd : any = {};
-		for(let prop in desc) {
+		const keys = Array.prototype.concat(Object.getOwnPropertyNames(desc), Object.getOwnPropertySymbols(desc));
+		for(let prop of keys) {
 			if(is_array_like || is_typed_array_like || is_array_buffer_like || is_string_like) {
 				if(this.is_array_index(prop) || prop === 'length') {
 					delete desc[prop];
@@ -601,9 +634,11 @@ class yaserializer {
 		}
 
 		let prop_array = [];
-		for(let p in pd) {
-			prop_array.push(this.serialize_primitive(p, ctxt));
-			prop_array.push(pd[p]);
+		for(let prop of keys) {
+			if(Object.prototype.hasOwnProperty.call(pd, prop)) {
+				prop_array.push(this.serialize_primitive(prop, ctxt));
+				prop_array.push(pd[prop]);
+			}
 		}
 		if(prop_array.length > 0) {
 			destructured['p'] = prop_array;
@@ -633,7 +668,8 @@ class yaserializer {
 				}
 				return result;
 			}, desc);
-			for(let prop in desc) {
+			const keys = Array.prototype.concat(Object.getOwnPropertyNames(desc), Object.getOwnPropertySymbols(desc));
+			for(let prop of keys) {
 				if(!desc[prop].hasOwnProperty('c')) {
 					desc[prop].configurable = true;
 				} else {
@@ -709,7 +745,7 @@ class yaserializer {
 				throw new Error(`class ${class_name} is not registered`);
 			}
 		}
-		let class_idx = ctxt.find_class_index(class_name);
+		let class_idx = ctxt.find_string_index(class_name);
 		let idx = ctxt.find_object_index(structured);
 		if(idx === -1) {
 			const substructure: any = [];
@@ -730,7 +766,7 @@ class yaserializer {
 
 		const object_data = ctxt.index[idx];
 		const class_idx = object_data[0];
-		const class_name = ctxt.classnames[class_idx];
+		const class_name = ctxt.string_table[class_idx];
 		if(!this.known_classes.has(class_name)) {
 			if(!this.attempt_dynamic_registration(class_name)) {
 				throw new Error(`class ${class_name} is not registered`);
@@ -799,7 +835,7 @@ class yaserializer {
 		case 'boolean':
 			return { 'l': structured ? 1 : 0 }
 		case 'string':
-			return { 'S': structured };
+			return { 'S': ctxt.find_string_index(structured) };
 		case 'bigint':
 			return { 'b': this.serialize_bigint(structured) };
 		case 'symbol':
@@ -825,7 +861,7 @@ class yaserializer {
 				case '-0': return -0;
 				}
 			} else if(destructured.hasOwnProperty('S')) {
-				return String(destructured['S']);
+				return String(ctxt.string_table[Number(destructured['S'])]);
 			} else if(destructured.hasOwnProperty('n')) {
 				return Number(destructured['n']);
 			} else if(destructured.hasOwnProperty('l')) {
@@ -845,7 +881,7 @@ class yaserializer {
 	serialize(structured: any, options?: yaserializer_options): string {
 		const ctxt = new serialization_context(options);
 		const destructured = this.serialize_primitive(structured, ctxt);
-		const deserialized = { 'A': ctxt.classnames, 'B': ctxt.index, 'C': destructured };
+		const deserialized = { 'A': ctxt.string_table, 'B': ctxt.index, 'C': destructured };
 		if(this.global_options && this.global_options.perform_encode) {
 			return this.global_options.perform_encode(deserialized);
 		} else {
@@ -862,7 +898,7 @@ class yaserializer {
 			throw new Error(`invalid serialization data: ${Array.prototype.slice.call(data, 0, 16)}...`);
 		}
 		const ctxt = new serialization_context(options);
-		ctxt.classnames = raw_object.A;
+		ctxt.string_table = raw_object.A;
 		ctxt.index = raw_object.B;
 		const deserialized = placeholder.try_snap(this.deserialize_primitive(raw_object.C, ctxt));
 		ctxt.post_deserialization_actions.forEach((action: (() => any)) => {

@@ -5,10 +5,16 @@ var yas = require('../dist/yaserializer.js');
 var expect = require('chai').expect;
 var util = require('util');
 
+util.inspect.defaultOptions.compact = true;
+util.inspect.defaultOptions.depth = 6;
+util.inspect.defaultOptions.breakLength = 135;
+util.inspect.defaultOptions.showHidden = true;
+util.inspect.defaultOptions.colors = true;
+
 (function () {
 	'use strict';
 
-	function reconstruct(ser, obj, verbose) {
+	function reconstruct(ser, obj, verbose = false) {
 		const serialized_form = ser.serialize(obj);
 		if(verbose) {
 			console.log('===============');
@@ -354,6 +360,30 @@ var util = require('util');
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
 
+		it('should preserve Symbol-identified properties', function() {
+			const obj = {
+				[Symbol.species]: 1,
+				
+				get [Symbol.hasInstance]() {
+					return 2;
+				},
+				
+				[Symbol.match]() {
+					return 3;
+				},
+				
+				async * [Symbol.unscopables]() {
+					yield 4;
+				},
+			};
+			
+			const reconstructed = reconstruct(ser, obj);
+			
+			expect(obj).to.be.deep.equal(reconstructed);
+			expect(obj.normal).to.be.deep.equal(reconstructed.normal);
+			expect(obj[Symbol.toStringTag]).to.be.deep.equal(reconstructed[Symbol.toStringTag]);
+		});
+
 		it('should not serialize a native function', function() {
 			const obj = eval;
 
@@ -491,11 +521,12 @@ var util = require('util');
 			expect(reconstructed[0]).to.be.equal(reconstructed[1]);
 		});
 
-		it('should preserve properties', function () {
+		it('should preserve properties on classes', function () {
 			class Rectangle {
 				constructor() {
 					this.width = 10;
 					this.height = 20;
+					
 					Object.defineProperty(this, 'area', {
 						get: function () {
 							return this.width * this.height;
@@ -525,6 +556,19 @@ var util = require('util');
 			reconstructed.width = 20;
 			expect(reconstructed.area).to.be.equal(200);
 			expect(reconstructed.perimeter).to.be.equal(60);
+		});
+		
+		it('should preserve properties on naked objects', function() {
+			const obj = {
+				get normal() {
+					return 1;
+				}
+			};
+			
+			const reconstructed = reconstruct(ser, obj);
+			
+			expect(obj).to.be.deep.equal(reconstructed);
+			expect(obj.normal).to.be.deep.equal(reconstructed.normal);
 		});
 
 		it('should preserve typed arrays', function () {
