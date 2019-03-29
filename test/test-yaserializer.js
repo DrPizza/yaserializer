@@ -359,28 +359,40 @@ util.inspect.defaultOptions.colors = true;
 			expect(obj.toString()).to.be.equal(reconstructed.toString());
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
-
+		
 		it('should preserve Symbol-identified properties', function() {
+			const global_symbol = Symbol.for('yas');
 			const obj = {
+				// regular property
 				[Symbol.species]: 1,
 				
-				get [Symbol.hasInstance]() {
+				// regular method
+				[Symbol.match]() {
 					return 2;
 				},
 				
-				[Symbol.match]() {
+				// getter
+				get [Symbol.hasInstance]() {
 					return 3;
 				},
 				
-				async * [Symbol.unscopables]() {
-					yield 4;
+				// setter
+				set [global_symbol] (x) {
+					console.log(x);
 				},
+				
+				// annoying function
+				async * [Symbol.unscopables]() {
+					yield 5;
+				},
+				
+				//computed
+				['a' + 'b']: 6,
 			};
 			
 			const reconstructed = reconstruct(ser, obj);
 			
 			expect(obj).to.be.deep.equal(reconstructed);
-			expect(obj.normal).to.be.deep.equal(reconstructed.normal);
 			expect(obj[Symbol.toStringTag]).to.be.deep.equal(reconstructed[Symbol.toStringTag]);
 		});
 

@@ -477,45 +477,58 @@ class yaserializer {
 	}
 
 	private deserialize_function_like(destructured: any, ctxt: serialization_context, reg: registration): Function {
+		// there must be a better way, surely...
 		const strict_environment = !destructured.hasOwnProperty('caller');
 		const prelude = strict_environment ? `'use strict'; ` : '';
 		const raw_name = this.deserialize_primitive(destructured[0], ctxt);
-		
-		if(raw_name.indexOf(' ') === -1 && raw_name.indexOf('.') === -1) {
+		// TODO is there an elegant way to retrieve the real (caller's) name from here,
+		// as that doesn't get flattened into a string
+		if(!raw_name.match(/Symbol\..*/)
+		&& !raw_name.match(/get .*/)
+		&& !raw_name.match(/set .*/)) {
 			const name = raw_name && raw_name !== 'anonymous' ? `const ${raw_name} = ` : '(';
 			const body = destructured[1];
 			const tail = raw_name && raw_name !== 'anonymous' ? `; ${raw_name};` : ')';
 			return (1, eval)(prelude + name + body + tail) as Function;
 		}
-		let function_header = 'function';
+		// funny names, e.g. getters' "get propertyname" or Symbols need special/annoying handling
+		let function_decl = ' ';
 		switch(reg.clazz.name) {
 		case 'Function':
-			function_header = 'function';
+			function_decl = ' ';
 			break;
 		case 'AsyncFunction':
-			function_header = 'async function';
+			function_decl = 'async  ';
 			break;
 		case 'GeneratorFunction':
-			function_header = 'function*';
+			function_decl = '* ';
 			break;
 		case 'AsyncGeneratorFunction':
-			function_header = 'async function*';
+			function_decl = 'async * ';
 		}
+		let processed_body = destructured[1].replace(/get /, '').replace(/set /, '').replace(/async /, '').trim().replace(/^\*/, '').trim().replace(/^\[[^]+\]/, '').replace(/^[^(]*/, '');
+		const head = 'const x = { ';
+		const body = processed_body;
+		const tail = `}; x;`;
 		
-		const name = 'const x = ';
-		const body = destructured[1].substring(destructured[1].indexOf(raw_name) + raw_name.length);
-		const tail = '; x;';
+		const cooked_name = raw_name.match(/.*\[Symbol\..*\]/) ? raw_name
+		                  : raw_name.match(/.*\[.*\]/)         ? '[Symbol.for("' + raw_name.substring(raw_name.indexOf('[') + 1, raw_name.indexOf(']')) + '")]'
+		                  :                                      raw_name;
 		// eval in global scope
-		const fn = (1, eval)(prelude + name + function_header + body + tail) as Function;
-		
-		const desc = Object.getOwnPropertyDescriptor(fn, 'name')!;
-		desc.writable = true;
-		Object.defineProperty(fn, 'name', desc);
-		desc.value = raw_name;
-		Object.defineProperty(fn, 'name', desc);
-		desc.writable = false;
-		Object.defineProperty(fn, 'name', desc);
-		return fn;
+		console.log(prelude + head + function_decl + cooked_name + body + tail);
+		const obj = (1, eval)(prelude + head + function_decl + cooked_name + body + tail) as Function;
+		Object.setPrototypeOf(obj, null);
+		const descs = Object.getOwnPropertyDescriptors(obj);
+		const keys = Array.prototype.concat(Object.getOwnPropertyNames(descs), Object.getOwnPropertySymbols(descs));
+		const key = keys[0];
+		const desc = descs[key];
+		if(Object.prototype.hasOwnProperty.call(desc, 'get')) {
+			return desc['get'] as Function;
+		} else if(Object.prototype.hasOwnProperty.call(desc, 'set')) {
+			return desc['set'] as Function;
+		} else {
+			return desc['value'] as Function;
+		}
 	}
 
 	private serialize_array_buffer_like(structured: ArrayBuffer, ctxt: serialization_context, reg: registration) : any {
