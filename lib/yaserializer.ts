@@ -16,17 +16,28 @@ class serialization_context {
 	invocation_options?: yaserializer_options;
 	index: any[];
 	objects: any[];
+	classnames: string[];
 	post_deserialization_actions: (() => any)[];
 
 	constructor(options?: yaserializer_options) {
 		this.invocation_options = options;
 		this.index = [];
 		this.objects = [];
+		this.classnames = [];
 		this.post_deserialization_actions = [];
 	}
 
 	find_object_index(obj: any): number {
 		return this.objects.indexOf(obj);
+	}
+	
+	find_class_index(classname: string) : number {
+		let idx = this.classnames.indexOf(classname);
+		if(idx === -1) {
+			idx = this.classnames.length;
+			this.classnames.push(classname);
+		}
+		return idx
 	}
 
 	get_next_index(obj: any, destructured: any): number {
@@ -291,7 +302,7 @@ class yaserializer {
 	private serialize_symbol(obj: symbol): any {
 		const desc = obj.description;
 		if(/^Symbol\./.test(desc)) {
-			return { 'wk': desc.replace(/^Symbol\./, '') };
+			return { 'w': desc.replace(/^Symbol\./, '') };
 		}
 		const key = Symbol.keyFor(obj);
 		if(key !== undefined) {
@@ -301,8 +312,8 @@ class yaserializer {
 	}
 
 	private deserialize_symbol(obj: any): symbol {
-		if(obj.hasOwnProperty('wk')) {
-			const desc : string = obj['wk'];
+		if(obj.hasOwnProperty('w')) {
+			const desc : string = obj['w'];
 			// @ts-ignore
 			return Symbol[desc] as symbol;
 		} else if(obj.hasOwnProperty('g')) {
@@ -347,7 +358,7 @@ class yaserializer {
 	}
 
 	private serialize_boolean_like(structured: Boolean, ctxt: serialization_context, reg: registration): any {
-		return structured.valueOf();
+		return structured.valueOf() ? 1 : 0;
 	}
 
 	private deserialize_boolean_like(destructured: any, ctxt: serialization_context, reg: registration): Boolean {
@@ -398,41 +409,45 @@ class yaserializer {
 	private serialize_array_like(structured: Array<any>, ctxt: serialization_context, reg: registration) : any {
 		let destructured = [] as any[];
 		structured.forEach((value: any, idx: number) => {
-			destructured.push([idx, this.serialize_primitive(value, ctxt)]);
+			destructured.push(idx);
+			destructured.push(this.serialize_primitive(value, ctxt));
 		});
 		return destructured;
 	}
 
 	private deserialize_array_like(destructured: any, ctxt: serialization_context, reg: registration) : Array<any> {
-		let structured : any[] = [];
-		destructured.forEach((pair: any[]) => {
-			placeholder.try_snap(this.deserialize_primitive(pair[1], ctxt), (self: any) => {
-				structured[this.to_uint_32(Number(pair[0]))] = placeholder.try_snap(self);
-			});
-		});
-		return structured;
+		return (destructured as any[]).reduce<any[]>((result: any[], value: any, index: number, array: any[]) => {
+			if(index % 2 == 0) {
+				const [idx, elem] = array.slice(index, index + 2);
+				placeholder.try_snap(this.deserialize_primitive(elem, ctxt), (self: any) => {
+					result[this.to_uint_32(Number(idx))] = placeholder.try_snap(self);
+				});
+			}
+			return result;
+		}, []);
 	}
 
 	private serialize_map_like(structured: Map<any, any>, ctxt: serialization_context, reg: registration) : any {
 		let destructured = [] as any[];
 		structured.forEach((value: any, key: any) => {
-			destructured.push([this.serialize_primitive(key, ctxt), this.serialize_primitive(value, ctxt)]);
+			destructured.push(this.serialize_primitive(key, ctxt));
+			destructured.push(this.serialize_primitive(value, ctxt));
 		});
 		return destructured;
 	}
 
 	private deserialize_map_like(destructured: any, ctxt: serialization_context, reg: registration) : Map<any, any> {
-		let structured = new Map<any, any>();
-		destructured.forEach((pair: any[]) => {
-			const key = pair[0];
-			const value = pair[1];
-			placeholder.try_snap(this.deserialize_primitive(key, ctxt), (k: any) => {
-				placeholder.try_snap(this.deserialize_primitive(value, ctxt), (v: any) => {
-					structured.set(k, v);
+		return (destructured as any[]).reduce<Map<any, any>>((result: Map<any, any>, value: any, index: number, array: any[]) => {
+			if(index % 2 == 0) {
+				const [key, value] = array.slice(index, index + 2);
+				placeholder.try_snap(this.deserialize_primitive(key, ctxt), (k: any) => {
+					placeholder.try_snap(this.deserialize_primitive(value, ctxt), (v: any) => {
+						result.set(k, v);
+					});
 				});
-			});
-		});
-		return structured;
+			}
+			return result;
+		}, new Map<any, any>());
 	}
 
 	private serialize_set_like(structured: Set<any>, ctxt: serialization_context, reg: registration) : any {
@@ -483,13 +498,13 @@ class yaserializer {
 		const buff = this.serialize_primitive(structured.buffer, ctxt);
 		const os = structured.byteOffset;
 		const len = structured.byteLength;
-		return { b: buff, o: os, l: len };
+		return [ buff, os, len ];
 	}
 
 	private deserialize_data_view_like(destructured: any, ctxt: serialization_context, reg: registration) : DataView {
-		const buff = this.deserialize_primitive(destructured['b'], ctxt);
-		const os = Number(destructured['o']);
-		const len = Number(destructured['l']);
+		const buff = this.deserialize_primitive(destructured[0], ctxt);
+		const os = Number(destructured[1]);
+		const len = Number(destructured[2]);
 		return new DataView(buff, os, len);
 	}
 
@@ -534,6 +549,7 @@ class yaserializer {
 		};
 
 		const desc = Object.getOwnPropertyDescriptors(structured);
+		const pd : any = {};
 		for(let prop in desc) {
 			if(is_array_like || is_typed_array_like || is_array_buffer_like || is_string_like) {
 				if(this.is_array_index(prop) || prop === 'length') {
@@ -557,29 +573,37 @@ class yaserializer {
 				delete desc[prop];
 				continue;
 			}
+			pd[prop] = {};
 			if(desc[prop].hasOwnProperty('value')) {
-				desc[prop].value = this.serialize_primitive(desc[prop].value, ctxt);
+				pd[prop].v = this.serialize_primitive(desc[prop].value, ctxt);
 				if(desc[prop].writable === true) {
 					delete desc[prop].writable;
+				} else {
+					pd[prop].w = false;
 				}
 			}
 			if(desc[prop].hasOwnProperty('get')) {
-				desc[prop]['get'] = this.serialize_primitive(desc[prop]['get'], ctxt);
+				pd[prop].g = this.serialize_primitive(desc[prop]['get'], ctxt);
 			}
 			if(desc[prop].hasOwnProperty('set')) {
-				desc[prop]['set'] = this.serialize_primitive(desc[prop]['set'], ctxt);
+				pd[prop].s = this.serialize_primitive(desc[prop]['set'], ctxt);
 			}
 			if(desc[prop].configurable === true) {
 				delete desc[prop].configurable;
+			} else {
+				pd[prop].c = false;
 			}
 			if(desc[prop].enumerable === true) {
 				delete desc[prop].enumerable;
+			} else {
+				pd[prop].e = false;
 			}
 		}
 
 		let prop_array = [];
-		for(let p in desc) {
-			prop_array.push([this.serialize_primitive(p, ctxt), desc[p]]);
+		for(let p in pd) {
+			prop_array.push(this.serialize_primitive(p, ctxt));
+			prop_array.push(pd[p]);
 		}
 		if(prop_array.length > 0) {
 			destructured['p'] = prop_array;
@@ -601,32 +625,43 @@ class yaserializer {
 		if(destructured.hasOwnProperty('p')) {
 			const prop_array : any[] = destructured['p'];
 			const desc : any = {};
-			prop_array.map((value: any): any => {
-				desc[this.deserialize_primitive(value[0], ctxt)] = value[1];
-			});
-			for(let prop in desc) {
-				if(!desc[prop].hasOwnProperty('configurable')) {
-					desc[prop].configurable = true;
+			
+			prop_array.reduce<any[]>((result: any[], value: any, index: number, array: any[]) => {
+				if(index % 2 == 0) {
+					const [k, v] = array.slice(index, index + 2);
+					desc[this.deserialize_primitive(k, ctxt)] = v;
 				}
-				if(!desc[prop].hasOwnProperty('enumerable')) {
+				return result;
+			}, desc);
+			for(let prop in desc) {
+				if(!desc[prop].hasOwnProperty('c')) {
+					desc[prop].configurable = true;
+				} else {
+					desc[prop].configurable = false;
+				}
+				if(!desc[prop].hasOwnProperty('e')) {
 					desc[prop].enumerable = true;
+				} else {
+					desc[prop].enumerable = false;
 				}
 				
-				if(desc[prop].hasOwnProperty('value')) {
-					if(!desc[prop].hasOwnProperty('writable')) {
+				if(desc[prop].hasOwnProperty('v')) {
+					if(!desc[prop].hasOwnProperty('w')) {
 						desc[prop].writable = true;
+					} else {
+						desc[prop].writable = false;
 					}
-					const unstructured = desc[prop].value;
+					const unstructured = desc[prop].v;
 					desc[prop].value = undefined;
 					placeholder.try_snap(this.deserialize_primitive(unstructured, ctxt), (val: any) => {
 						desc[prop].value = placeholder.try_snap(val);
 						Object.defineProperty(structured, prop, desc[prop]);
 					});
 				}
-				if(desc[prop].hasOwnProperty('get') || desc[prop].hasOwnProperty('set')) {
-					const unstructured_getter = desc[prop]['get'];
+				if(desc[prop].hasOwnProperty('g') || desc[prop].hasOwnProperty('s')) {
+					const unstructured_getter = desc[prop]['g'];
 					desc[prop]['get'] = undefined;
-					const unstructured_setter = desc[prop]['set'];
+					const unstructured_setter = desc[prop]['s'];
 					desc[prop]['set'] = undefined;
 					placeholder.try_snap(this.deserialize_primitive(unstructured_getter, ctxt), (getter: any) => {
 						placeholder.try_snap(this.deserialize_primitive(unstructured_setter, ctxt), (setter: any) => {
@@ -674,13 +709,14 @@ class yaserializer {
 				throw new Error(`class ${class_name} is not registered`);
 			}
 		}
+		let class_idx = ctxt.find_class_index(class_name);
 		let idx = ctxt.find_object_index(structured);
 		if(idx === -1) {
-			const substructure: any = {};
-			substructure['c'] = class_name;
+			const substructure: any = [];
+			substructure.push(class_idx);
 			idx = ctxt.get_next_index(structured, substructure);
 			const reg = this.known_classes.get(class_name)!;
-			substructure['v'] = this.serialize_arbitrary_object(structured, ctxt, reg);
+			substructure.push(this.serialize_arbitrary_object(structured, ctxt, reg));
 		}
 		return idx;
 	}
@@ -693,14 +729,15 @@ class yaserializer {
 		ctxt.objects[idx] = new placeholder(idx, ctxt);
 
 		const object_data = ctxt.index[idx];
-		const class_name = object_data['c'];
+		const class_idx = object_data[0];
+		const class_name = ctxt.classnames[class_idx];
 		if(!this.known_classes.has(class_name)) {
 			if(!this.attempt_dynamic_registration(class_name)) {
 				throw new Error(`class ${class_name} is not registered`);
 			}
 		}
 		const reg = this.known_classes.get(class_name)!;
-		const structured = this.deserialize_arbitrary_object(object_data['v'], ctxt, reg);
+		const structured = this.deserialize_arbitrary_object(object_data[1], ctxt, reg);
 
 		if(ctxt.invocation_options && ctxt.invocation_options.on_deserialize) {
 			ctxt.invocation_options.on_deserialize(structured);
@@ -733,24 +770,24 @@ class yaserializer {
 
 	// m: magic value: 'undefined' | 'NaN' | 'Infinity' | 'null'
 	// b: BigInt
-	// y: Symbol: 'wk': string (well-known) | 'g': string (global)
-	// o: object: integer | { c: class_name, a: array-like, p: property-descriptor } | null
+	// y: Symbol: 'w': string (well-known) | 'g': string (global)
+	// []: object: integer | { c: class_name, a: array-like, p: property-descriptor }
 
 	private serialize_primitive(structured: any, ctxt: serialization_context): any {
 		if(structured === undefined) {
-			return { 'm': 'undefined' };
+			return { 'm': 'u' };
 		}
 		if(structured === null) {
-			return { 'm': 'null' };
+			return { 'm': 'n' };
 		}
 		if(typeof structured === 'number' && Number.isNaN(structured)) {
-			return { 'm': 'NaN' };
+			return { 'm': 'N' };
 		}
 		if(typeof structured === 'number' && !Number.isFinite(structured) && structured > 0) {
-			return { 'm': 'Infinity' };
+			return { 'm': 'I' };
 		}
 		if(typeof structured === 'number' && !Number.isFinite(structured) && structured < 0) {
-			return { 'm': '-Infinity' };
+			return { 'm': '-I' };
 		}
 		if(typeof structured === 'number' && structured === 0 && (1 / structured) == -Infinity) {
 			return { 'm': '-0' };
@@ -760,16 +797,16 @@ class yaserializer {
 		case 'number':
 			return { 'n': structured };
 		case 'boolean':
-			return { 'l': structured }
+			return { 'l': structured ? 1 : 0 }
 		case 'string':
-			return { 's': structured };
+			return { 'S': structured };
 		case 'bigint':
 			return { 'b': this.serialize_bigint(structured) };
 		case 'symbol':
 			return { 'y': this.serialize_symbol(structured) };
 		case 'function':
 		case 'object':
-			return { 'o': this.serialize_object(structured, ctxt) };
+			return [this.serialize_object(structured, ctxt)];
 		default:
 			throw new Error(`don't know how to serialize an object with type ${typeof structured}`);
 		}
@@ -780,15 +817,15 @@ class yaserializer {
 		case 'object':
 			if(destructured.hasOwnProperty('m')) {
 				switch(destructured['m']) {
-				case 'undefined': return undefined;
-				case 'null'     : return null;
-				case 'NaN'      : return NaN;
-				case 'Infinity' : return Infinity;
-				case '-Infinity': return -Infinity;
-				case '-0'       : return -0;
+				case 'u' : return undefined;
+				case 'n' : return null;
+				case 'N' : return NaN;
+				case 'I' : return Infinity;
+				case '-I': return -Infinity;
+				case '-0': return -0;
 				}
-			} else if(destructured.hasOwnProperty('s')) {
-				return String(destructured['s']);
+			} else if(destructured.hasOwnProperty('S')) {
+				return String(destructured['S']);
 			} else if(destructured.hasOwnProperty('n')) {
 				return Number(destructured['n']);
 			} else if(destructured.hasOwnProperty('l')) {
@@ -797,8 +834,8 @@ class yaserializer {
 				return this.deserialize_bigint(destructured['b']);
 			} else if(destructured.hasOwnProperty('y')) {
 				return this.deserialize_symbol(destructured['y']);
-			} else if(destructured.hasOwnProperty('o')) {
-				return this.deserialize_object(destructured['o'], ctxt);
+			} else if(destructured.hasOwnProperty(0)) {
+				return this.deserialize_object(destructured[0], ctxt);
 			}
 		default:
 			throw new Error(`don't know how to deserialize an object of type ${typeof destructured}`);
@@ -808,7 +845,7 @@ class yaserializer {
 	serialize(structured: any, options?: yaserializer_options): string {
 		const ctxt = new serialization_context(options);
 		const destructured = this.serialize_primitive(structured, ctxt);
-		const deserialized = { 'parts': ctxt.index, 'root': destructured };
+		const deserialized = { 'A': ctxt.classnames, 'B': ctxt.index, 'C': destructured };
 		if(this.global_options && this.global_options.perform_encode) {
 			return this.global_options.perform_encode(deserialized);
 		} else {
@@ -820,13 +857,14 @@ class yaserializer {
 		const decode_function = (this.global_options && this.global_options.perform_decode) ? this.global_options.perform_decode
 		                      :                                                               JSON.parse;
 		const raw_object : any = decode_function(data);
-		if(!raw_object.hasOwnProperty('parts') || !raw_object.hasOwnProperty('root')
-		|| !(Array.isArray(raw_object.parts))) {
+		if(!raw_object.hasOwnProperty('A') || !raw_object.hasOwnProperty('B') || !raw_object.hasOwnProperty('C')
+		|| !(Array.isArray(raw_object.A)) || !(Array.isArray(raw_object.B))) {
 			throw new Error(`invalid serialization data: ${Array.prototype.slice.call(data, 0, 16)}...`);
 		}
 		const ctxt = new serialization_context(options);
-		ctxt.index = raw_object.parts;
-		const deserialized = placeholder.try_snap(this.deserialize_primitive(raw_object.root, ctxt));
+		ctxt.classnames = raw_object.A;
+		ctxt.index = raw_object.B;
+		const deserialized = placeholder.try_snap(this.deserialize_primitive(raw_object.C, ctxt));
 		ctxt.post_deserialization_actions.forEach((action: (() => any)) => {
 			action();
 		});

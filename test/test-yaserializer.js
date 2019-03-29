@@ -279,6 +279,16 @@ var util = require('util');
 			const reconstructed = reconstruct(ser, obj1);
 			expect(obj1).to.be.deep.equal(reconstructed);
 		});
+		
+		it('should preserve identity in conjunction with built-in types', function() {
+			const obj = new Map();
+			const entry = ['a', ['b', 'c']];
+			obj.set('d', entry);
+			obj.set('e', entry);
+			
+			const reconstructed = reconstruct(ser, obj);
+			expect(obj).to.be.deep.equal(reconstructed);
+		});
 	});
 
 	describe('functions', function () {
