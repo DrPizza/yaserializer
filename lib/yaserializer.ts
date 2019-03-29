@@ -13,13 +13,13 @@ registrations.___ = undefined;
 delete registrations.___;
 
 class serialization_context {
-	invocation_options?: yaserializer_options;
+	invocation_options?: options;
 	index: any[];
 	objects: any[];
 	string_table: string[];
 	post_deserialization_actions: (() => any)[];
 
-	constructor(options?: yaserializer_options) {
+	constructor(options?: options) {
 		this.invocation_options = options;
 		this.index = [];
 		this.objects = [];
@@ -89,24 +89,12 @@ class placeholder {
 type label = (string | number | symbol);
 type ignore_rule = label | RegExp;
 
-class yaserializer_options {
-	ignored: ignore_rule[];
-	on_deserialize?: (obj: any) => any;
+interface options {
+	ignore             ?: ignore_rule[];
+	on_deserialize     ?: (obj: any) => any;
 	on_post_deserialize?: (obj: any) => any;
-	perform_encode?: (obj: any) => any;
-	perform_decode?: (obj: any) => any;
-
-	constructor(ignored?: ignore_rule | ignore_rule[],
-	            on_deserialize?: (obj: any) => any,
-	            on_post_deserialize?: (obj: any) => any,
-	            perform_encode?: (obj: any) => any,
-	            perform_decode?: (obj: any) => any) {
-		this.ignored             = ignored ? (Array.isArray(ignored) ? ignored : [ignored]) : [];
-		this.on_deserialize      = on_deserialize;
-		this.on_post_deserialize = on_post_deserialize;
-		this.perform_encode      = perform_encode;
-		this.perform_decode      = perform_decode;
-	}
+	perform_encode     ?: (obj: any) => any;
+	perform_decode     ?: (obj: any) => any;
 }
 
 class base_class_builder {
@@ -130,14 +118,14 @@ class registration {
 	builder: base_class_builder;
 	serialize_func?: (structured: any) => [any, boolean];
 	deserialize_func?: (structured: any, destructured: any) => boolean;
-	class_options?: yaserializer_options;
+	class_options?: options;
 
 	constructor(clazz: arbitrary_ctor,
 	            base: arbitrary_ctor,
 	            builder: base_class_builder,
 	            srlz?: (structured: any) => [any, boolean],
 	            dsrlz?: (structured: any, destructured: any) => boolean,
-	            class_options?: yaserializer_options) {
+	            class_options?: options) {
 		this.clazz = clazz;
 		this.base = base;
 		this.builder = builder;
@@ -162,9 +150,9 @@ class yaserializer {
 
 	private base_class_builders: Map<arbitrary_ctor, base_class_builder>;
 	private known_classes: Map<string, registration>;
-	private global_options?: yaserializer_options;
+	private global_options?: options;
 
-	constructor(known_classes?: arbitrary_ctor[], options?: yaserializer_options) {
+	constructor(known_classes?: arbitrary_ctor[], options?: options) {
 		this.known_classes = new Map<string, registration>();
 		this.base_class_builders = new Map<arbitrary_ctor, base_class_builder>();
 
@@ -243,7 +231,7 @@ class yaserializer {
 		}
 
 		if(options) {
-			this.global_options = new yaserializer_options();
+			this.global_options = {};
 			Object.assign(this.global_options, options);
 		}
 	}
@@ -267,7 +255,7 @@ class yaserializer {
 	}
 
 	make_class_serializable(clazz: arbitrary_ctor,
-	                        options?: yaserializer_options,
+	                        options?: options,
 	                        srlz?: (structured: any) => [any, boolean],
 	                        dsrlz?: (structured: any, destructured: any) => boolean
 	                        ) {
@@ -573,14 +561,14 @@ class yaserializer {
 		}
 
 		let ignores: ignore_rule[] = [];
-		if(ctxt.invocation_options) {
-			ignores = ignores.concat(ctxt.invocation_options.ignored);
+		if(ctxt.invocation_options && ctxt.invocation_options.ignore) {
+			ignores = ignores.concat(ctxt.invocation_options.ignore);
 		}
-		if(reg.class_options) {
-			ignores = ignores.concat(reg.class_options.ignored);
+		if(reg.class_options && reg.class_options.ignore) {
+			ignores = ignores.concat(reg.class_options.ignore);
 		}
-		if(this.global_options) {
-			ignores = ignores.concat(this.global_options.ignored);
+		if(this.global_options && this.global_options.ignore) {
+			ignores = ignores.concat(this.global_options.ignore);
 		}
 
 		let should_ignore_label = (rule: ignore_rule, identifier: label) => {
@@ -735,14 +723,13 @@ class yaserializer {
 			const desrlz_name      = Reflect.getMetadata(deserializer_key      , ctor);
 			const post_action_name = Reflect.getMetadata(deserialize_action_key, ctor);
 			
-			const options     = new yaserializer_options(ignores);
-			const post_action = post_action_name ? ctor.prototype[post_action_name] : undefined;
+			const ignored     = ignores          ? (Array.isArray(ignores) ? ignores : [ignores]) : undefined
 			const srlz        = srlz_name        ? ctor          [srlz_name]        : undefined;
 			const desrlz      = desrlz_name      ? ctor          [desrlz_name]      : undefined;
-			if(post_action) {
-				options.on_post_deserialize = function(obj) { return post_action.bind(obj)(); };
-			}
-			this.make_class_serializable(ctor, options, srlz, desrlz);
+			const post_action = post_action_name ? ctor.prototype[post_action_name] : undefined;
+			const bound_post  = post_action      ? function(obj: any) { return post_action.bind(obj)(); } : undefined;
+			
+			this.make_class_serializable(ctor, { ignore: ignored, on_post_deserialize: bound_post }, srlz, desrlz);
 			return true;
 		} else {
 			return false;
@@ -890,7 +877,7 @@ class yaserializer {
 		}
 	}
 
-	serialize(structured: any, options?: yaserializer_options): string {
+	serialize(structured: any, options?: options): string {
 		const ctxt = new serialization_context(options);
 		const destructured = this.serialize_primitive(structured, ctxt);
 		const deserialized = { 'A': ctxt.string_table, 'B': ctxt.index, 'C': destructured };
@@ -901,7 +888,7 @@ class yaserializer {
 		}
 	}
 
-	deserialize(data: any, options?: yaserializer_options) : any {
+	deserialize(data: any, options?: options) : any {
 		const decode_function = (this.global_options && this.global_options.perform_decode) ? this.global_options.perform_decode
 		                      :                                                               JSON.parse;
 		const raw_object : any = decode_function(data);
@@ -951,7 +938,7 @@ const deserializer : MethodDecorator = (target: Object, propertyKey: string | sy
 
 export {
 	yaserializer,
-	yaserializer_options,
+	options,
 	serializable,
 	unserializable,
 	serializer,

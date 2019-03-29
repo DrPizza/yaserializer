@@ -744,16 +744,16 @@ util.inspect.defaultOptions.colors = true;
 					this.$someOtherStuff     = 0;
 					}
 			}
-			const global_options = new yas.yaserializer_options(['$global_ignored']);
+			const global_options = { ignore: '$global_ignored' };
 			const ser = new yas.yaserializer([], global_options);
 
-			const class_options = new yas.yaserializer_options([/\$class.*/]);
+			const class_options = { ignore: /\$class.*/ };
 			ser.make_class_serializable(ExcludedMembers, class_options);
 
 			const obj = new ExcludedMembers();
 			obj._cache = [1, 2, 3];
 
-			const invocation_options = new yas.yaserializer_options(['$invocation_ignored']);
+			const invocation_options = { ignore: '$invocation_ignored' };
 			const serialized_form = ser.serialize(obj, invocation_options);
 			const reconstructed = ser.deserialize(serialized_form);
 
@@ -778,16 +778,14 @@ util.inspect.defaultOptions.colors = true;
 				}
 			}
 	
-			const instance_options = new yas.yaserializer_options();
-			const ser = new yas.yaserializer([], instance_options);
-			const class_options = new yas.yaserializer_options(
-				[
-					'_cache'
-				],
-				(obj) => {
+			const ser = new yas.yaserializer([]);
+			const class_options = {
+				ignore: ['_cache'],
+				on_deserialize: (obj) => {
 					obj.rebuild_cache();
 				}
-			);
+			};
+			
 			ser.make_class_serializable(DeserializeAction, class_options);
 
 			const obj = new DeserializeAction();
@@ -813,15 +811,12 @@ util.inspect.defaultOptions.colors = true;
 			}
 	
 			const ser = new yas.yaserializer();
-			const options = new yas.yaserializer_options(
-				[
-					'_cache'
-				],
-				null,
-				(obj) => {
+			const options = {
+				ignore: ['_cache' ],
+				on_post_deserialize: (obj) => {
 					obj.rebuild_cache();
 				}
-			);
+			};
 			ser.make_class_serializable(PostDeserializeAction, options);
 
 			const obj = new PostDeserializeAction();
@@ -837,9 +832,10 @@ util.inspect.defaultOptions.colors = true;
 			
 		it('should let me perform final encoding in different ways', function() {
 			const BSON = require('bson');
-			const instance_options = new yas.yaserializer_options();
-			instance_options.perform_encode = BSON.serialize;
-			instance_options.perform_decode = BSON.deserialize;
+			const instance_options = { 
+				perform_encode:  BSON.serialize,
+				perform_decode: BSON.deserialize
+			}
 			const bser = new yas.yaserializer([], instance_options);
 			
 			const obj = { d: new Date(), s: 'string', arr: [1, 2, 3] };
@@ -847,18 +843,19 @@ util.inspect.defaultOptions.colors = true;
 			const reconstructed = reconstruct(bser, obj);
 			expect(reconstructed).to.be.deep.equal(obj);
 		});
-	
+ 
 		it('should let me perform final encoding in more complex ways', function() {
 			const BSON = require('bson');
 			const zlib = require('zlib');
-			const instance_options = new yas.yaserializer_options();
-			instance_options.perform_encode = function(obj) {
-				const serial_form = BSON.serialize(obj);
-				return zlib.deflateSync(serial_form);
-			};
-			instance_options.perform_decode = function(obj) {
-				const serial_form = zlib.inflateSync(obj);
-				return BSON.deserialize(serial_form);
+			const instance_options = {
+				perform_encode: function(obj) {
+					const serial_form = BSON.serialize(obj);
+					return zlib.deflateSync(serial_form);
+				},
+				perform_decode: function(obj) {
+					const serial_form = zlib.inflateSync(obj);
+					return BSON.deserialize(serial_form);
+				}
 			};
 			const bcer = new yas.yaserializer([], instance_options);
 			
