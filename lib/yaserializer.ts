@@ -13,10 +13,10 @@ registrations.___ = undefined;
 delete registrations.___;
 
 class serialization_context {
-	invocation_options?: options;
-	index: any[];
-	objects: any[];
-	string_table: string[];
+	invocation_options         ?: options;
+	index                       : any[];
+	objects                     : any[];
+	string_table                : string[];
 	post_deserialization_actions: (() => any)[];
 
 	constructor(options?: options) {

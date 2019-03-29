@@ -30,22 +30,16 @@ class ExcludedMembers {
 		this.$someOtherStuff     = 0;
 		}
 }
-
-// every use of this serializer object will ignore members called $global_ignored
-const global_options = new yas.yaserializer_options(['$global_ignored']);
+const global_options = { ignore: '$global_ignored' };
 const ser = new yas.yaserializer([], global_options);
 
-// this particular class will have its members starting $class ignored. But other
-// classes registered with this serializer can have them preserved.
-const class_options = new yas.yaserializer_options([/\$class.*/]);
+const class_options = { ignore: /\$class.*/ };
 ser.make_class_serializable(ExcludedMembers, class_options);
 
 const obj = new ExcludedMembers();
 obj._cache = [1, 2, 3];
 
-// this particular call to serialize will ignore members named $invocation_ignored.
-// But other calls to this serializer can have them preserved.
-const invocation_options = new yas.yaserializer_options(['$invocation_ignored']);
+const invocation_options = { ignore: '$invocation_ignored' };
 const serialized_form = ser.serialize(obj, invocation_options);
 const reconstructed = ser.deserialize(serialized_form);
 

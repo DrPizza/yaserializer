@@ -1,6 +1,6 @@
 {
   "name": "yaserializer",
-  "version": "0.0.9",
+  "version": "1.0.0",
   "description": "JavaScript serialization library that can handle cycles and strives to preserve user-defined classes.",
   "main": "dist/yaserializer.js",
   "engines": {
@@ -11,7 +11,7 @@
     "url": "https://github.com/DrPizza/yaserializer"
   },
   "devDependencies": {
-    "@types/node": "^11.11.6",
+    "@types/node": "^11.12.1",
     "bson": "^4.0.2",
     "chai": "^4.2.0",
     "concurrently": "^4.1.0",
@@ -19,7 +19,7 @@
     "mocha": "^6.0.2",
     "nyc": "^13.3.0",
     "should": "^13.2.3",
-    "typescript": "^3.3.4000"
+    "typescript": "^3.4.1"
   },
   "scripts": {
     "build": "npm run build-ts",

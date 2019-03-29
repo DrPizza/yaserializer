@@ -11,12 +11,12 @@ util.inspect.defaultOptions.breakLength = 135;
 util.inspect.defaultOptions.showHidden = true;
 util.inspect.defaultOptions.colors = true;
 
-(function () {
+(function() {
 	'use strict';
 
 	function reconstruct(ser, obj, verbose = false) {
 		const serialized_form = ser.serialize(obj);
-		if(verbose) {
+		if (verbose) {
 			console.log('===============');
 			console.log(util.inspect(obj, true, 12, true));
 			console.log('---------------');
@@ -24,20 +24,19 @@ util.inspect.defaultOptions.colors = true;
 			console.log('---------------');
 		}
 		const reconstructed = ser.deserialize(serialized_form);
-		if(verbose) {
+		if (verbose) {
 			console.log(util.inspect(reconstructed, true, 12, true));
 			console.log('===============');
 		}
 		return reconstructed;
 	}
 
-	describe('basic data types', function()
-	{
+	describe('basic data types', function() {
 		const ser = new yas.yaserializer([]);
 
 		it('should preserve numbers', function() {
 			const obj = 5;
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
@@ -45,7 +44,7 @@ util.inspect.defaultOptions.colors = true;
 
 		it('should preserve strings', function() {
 			const obj = 'Hello, World!';
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
@@ -61,18 +60,17 @@ util.inspect.defaultOptions.colors = true;
 
 		it('should preserve booleans', function() {
 			const obj = true;
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
 	});
 
-	describe('magic values', function()
-	{
+	describe('magic values', function() {
 		it('should preserve 0', function() {
 			const obj = 0;
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(1 / obj).to.equal(1 / reconstructed);
@@ -82,7 +80,7 @@ util.inspect.defaultOptions.colors = true;
 		const ser = new yas.yaserializer([]);
 		it('should preserve -0', function() {
 			const obj = -0;
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(1 / obj).to.equal(1 / reconstructed);
@@ -91,7 +89,7 @@ util.inspect.defaultOptions.colors = true;
 
 		it('should preserve null', function() {
 			const obj = null;
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
@@ -120,7 +118,7 @@ util.inspect.defaultOptions.colors = true;
 			expect(reconstructed).to.equal(Infinity);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
-	
+
 		it('should preserve -Infinity', function() {
 			var obj = -Infinity;
 
@@ -128,11 +126,9 @@ util.inspect.defaultOptions.colors = true;
 			expect(reconstructed).to.equal(-Infinity);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
-
 	});
 
-	describe('fundamental objects', function()
-	{
+	describe('fundamental objects', function() {
 		const ser = new yas.yaserializer([]);
 
 		it('should preserve Objects', function() {
@@ -153,7 +149,7 @@ util.inspect.defaultOptions.colors = true;
 
 		it('should preserve boxed Numbers', function() {
 			const obj = new Number(5);
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
@@ -161,7 +157,7 @@ util.inspect.defaultOptions.colors = true;
 
 		it('should preserve boxed Strings', function() {
 			const obj = new String('Hello');
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
@@ -213,18 +209,18 @@ util.inspect.defaultOptions.colors = true;
 
 		it('should not preserve local symbols', function() {
 			const obj = Symbol('local');
-			expect(function() { return ser.serialize(obj); }).to.throw();
+			expect(function() {
+				return ser.serialize(obj);
+			}).to.throw();
 		});
-
 	});
 
-	describe('compound data types: arrays and POJOs', function()
-	{
+	describe('compound data types: arrays and POJOs', function() {
 		const ser = new yas.yaserializer([]);
 
 		it('should preserve arrays', function() {
 			const obj = [1, 2, , 4, 5];
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
@@ -232,7 +228,7 @@ util.inspect.defaultOptions.colors = true;
 
 		it('should preserve ArrayBuffers', function() {
 			const obj = new ArrayBuffer(16);
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
@@ -240,7 +236,7 @@ util.inspect.defaultOptions.colors = true;
 
 		it('should preserve heterogeneous arrays', function() {
 			const obj = [1, 'str', , 4, 12345678901234567890n];
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
@@ -257,16 +253,24 @@ util.inspect.defaultOptions.colors = true;
 			}
 		});
 
-		it('should handle a POJO made up of primitive data types', function () {
-			const obj = { str: 'string', num: 5, bi: 12345678901234567890n, b: true,
-			              sa: ['str1', 'str2'], na: [1, 2, 3], bia: [12345678901234567890n, 22345678901234567890n, 32345678901234567890n], ba: [false, true],
-			              mixed: [1, 'str', , 4, 12345678901234567890n, { a: 'a', b: 'b' } ]};
+		it('should handle a POJO made up of primitive data types', function() {
+			const obj = {
+				str: 'string',
+				num: 5,
+				bi: 12345678901234567890n,
+				b: true,
+				sa: ['str1', 'str2'],
+				na: [1, 2, 3],
+				bia: [12345678901234567890n, 22345678901234567890n, 32345678901234567890n],
+				ba: [false, true],
+				mixed: [1, 'str', , 4, 12345678901234567890n, { a: 'a', b: 'b' }]
+			};
 
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.deep.equal(reconstructed);
 		});
 
-		it('should handle cyclic structures', function () {
+		it('should handle cyclic structures', function() {
 			const obj1 = { which: 1, parent: null, children: [] };
 			const obj2 = { which: 2, parent: obj1, children: [] };
 			const obj3 = { which: 3, parent: obj1, children: [] };
@@ -280,28 +284,32 @@ util.inspect.defaultOptions.colors = true;
 			obj3.children = [obj7, obj8];
 			obj1.parent = obj5;
 
-			expect(function() { return JSON.stringify(obj1); }).to.throw();
+			expect(function() {
+				return JSON.stringify(obj1);
+			}).to.throw();
 
 			const reconstructed = reconstruct(ser, obj1);
 			expect(obj1).to.be.deep.equal(reconstructed);
 		});
-		
+
 		it('should preserve identity in conjunction with built-in types', function() {
 			const obj = new Map();
 			const entry = ['a', ['b', 'c']];
 			obj.set('d', entry);
 			obj.set('e', entry);
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.be.deep.equal(reconstructed);
 		});
 	});
 
-	describe('functions', function () {
+	describe('functions', function() {
 		const ser = new yas.yaserializer();
 
 		it('should serialize a normal function', function() {
-			const obj = function(arg) { console.log(`Hello, ${arg}`); };
+			const obj = function(arg) {
+				console.log(`Hello, ${arg}`);
+			};
 
 			const reconstructed = reconstruct(ser, obj);
 			// deep-eql does not seem to be able to compare functions directly
@@ -324,9 +332,10 @@ util.inspect.defaultOptions.colors = true;
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
 
-
 		it('should serialize an async function', function() {
-			const obj = async function(arg) { return await `Hello, ${arg}`; };
+			const obj = async function(arg) {
+				return await `Hello, ${arg}`;
+			};
 			const reconstructed = reconstruct(ser, obj);
 			// deep-eql does not seem to be able to compare functions directly
 			expect(reconstructed).to.be.instanceof(Function);
@@ -337,7 +346,9 @@ util.inspect.defaultOptions.colors = true;
 		});
 
 		it('should serialize a generator function', function() {
-			const obj = function*(arg) { yield `Hello, ${arg}`; };
+			const obj = function*(arg) {
+				yield `Hello, ${arg}`;
+			};
 
 			const reconstructed = reconstruct(ser, obj);
 			// deep-eql does not seem to be able to compare functions directly
@@ -349,7 +360,9 @@ util.inspect.defaultOptions.colors = true;
 		});
 
 		it('should serialize an async generator function', function() {
-			const obj = async function*(arg) { yield `Hello, ${arg}`; };
+			const obj = async function*(arg) {
+				yield `Hello, ${arg}`;
+			};
 
 			const reconstructed = reconstruct(ser, obj);
 			// deep-eql does not seem to be able to compare functions directly
@@ -359,39 +372,39 @@ util.inspect.defaultOptions.colors = true;
 			expect(obj.toString()).to.be.equal(reconstructed.toString());
 			expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 		});
-		
+
 		it('should preserve Symbol-identified properties', function() {
 			const global_symbol = Symbol.for('yas');
 			const obj = {
 				// regular property
 				[Symbol.species]: 1,
-				
+
 				// regular method
 				[Symbol.match]() {
 					return 2;
 				},
-				
+
 				// getter
 				get [Symbol.hasInstance]() {
 					return 3;
 				},
-				
+
 				// setter
-				set [global_symbol] (x) {
+				set [global_symbol](x) {
 					console.log(x);
 				},
-				
+
 				// annoying function
-				async * [Symbol.unscopables]() {
+				async *[Symbol.unscopables]() {
 					yield 5;
 				},
-				
+
 				//computed
-				['a' + 'b']: 6,
+				['a' + 'b']: 6
 			};
-			
+
 			const reconstructed = reconstruct(ser, obj);
-			
+
 			expect(obj).to.be.deep.equal(reconstructed);
 			expect(obj[Symbol.toStringTag]).to.be.deep.equal(reconstructed[Symbol.toStringTag]);
 		});
@@ -399,18 +412,19 @@ util.inspect.defaultOptions.colors = true;
 		it('should not serialize a native function', function() {
 			const obj = eval;
 
-			expect(function() { return ser.serialize(obj); }).to.throw();
+			expect(function() {
+				return ser.serialize(obj);
+			}).to.throw();
 		});
-
 	});
 
-	describe('classes', function () {
+	describe('classes', function() {
 		class Color {
 			constructor(colorName) {
 				this.name = colorName;
 			}
 		}
-	
+
 		class Vehicle {
 			constructor() {
 				this.brand = 'Fiat';
@@ -427,10 +441,10 @@ util.inspect.defaultOptions.colors = true;
 				this.x = x;
 				this.y = y;
 			}
-			Shape.prototype.move = function (x, y) {
+			Shape.prototype.move = function(x, y) {
 				this.x += x;
 				this.y += y;
-			}
+			};
 
 			function Circle(x, y, r) {
 				Shape.call(this, x, y);
@@ -440,23 +454,23 @@ util.inspect.defaultOptions.colors = true;
 			Circle.prototype = Object.create(Shape.prototype);
 			Circle.prototype.constructor = Circle;
 
-			Circle.prototype.area = function () {
+			Circle.prototype.area = function() {
 				return this.r * 2 * Math.PI;
-			}
-			
+			};
+
 			let obj1 = new Circle(1, 2, 3);
 			let obj2 = new Shape(4, 5);
-			
+
 			const cser = new yas.yaserializer([Shape, Circle]);
-			
+
 			let reconstructed1 = reconstruct(cser, obj1, false);
 			let reconstructed2 = reconstruct(cser, obj2, false);
-			
+
 			expect(obj1).to.be.deep.equal(reconstructed1);
 			expect(obj2).to.be.deep.equal(reconstructed2);
 		});
 
-		it('should preserve object classes', function () {
+		it('should preserve object classes', function() {
 			const obj = new Vehicle();
 
 			const reconstructed = reconstruct(ser, obj);
@@ -469,10 +483,10 @@ util.inspect.defaultOptions.colors = true;
 				this.x = x;
 				this.y = y;
 			}
-			Shape.prototype.move = function (x, y) {
+			Shape.prototype.move = function(x, y) {
 				this.x += x;
 				this.y += y;
-			}
+			};
 
 			function Circle(x, y, r) {
 				Shape.call(this, x, y);
@@ -482,35 +496,34 @@ util.inspect.defaultOptions.colors = true;
 			Circle.prototype = Object.create(Shape.prototype);
 			Circle.prototype.constructor = Circle;
 
-			Circle.prototype.area = function () {
+			Circle.prototype.area = function() {
 				return this.r * 2 * Math.PI;
-			}
-			
+			};
+
 			class RedCircle extends Circle {
 				constructor(...args) {
 					super(...args);
-					
+
 					this.colour = 'red';
 				}
 			}
-			
+
 			let obj1 = new Circle(1, 2, 3);
 			let obj2 = new Shape(4, 5);
 			let obj3 = new RedCircle(6, 7, 8);
-			
+
 			const cser = new yas.yaserializer([Shape, Circle, RedCircle]);
-			
+
 			let reconstructed1 = reconstruct(cser, obj1, false);
 			let reconstructed2 = reconstruct(cser, obj2, false);
 			let reconstructed3 = reconstruct(cser, obj3, false);
-			
-			
+
 			expect(obj1).to.be.deep.equal(reconstructed1);
 			expect(obj2).to.be.deep.equal(reconstructed2);
 			expect(obj3).to.be.deep.equal(reconstructed3);
 		});
 
-		it('should preserve arrays of objects', function () {
+		it('should preserve arrays of objects', function() {
 			const obj = [new Vehicle(), new Vehicle()];
 			obj[0].brand = 'Renault';
 			obj[0].price = 95000;
@@ -520,27 +533,27 @@ util.inspect.defaultOptions.colors = true;
 			expect(obj).to.be.deep.equal(reconstructed);
 		});
 
-		it('should preserve object identity in arrays', function () {
+		it('should preserve object identity in arrays', function() {
 			const the_vehicle = new Vehicle();
 			the_vehicle.brand = 'Citroen';
 			the_vehicle.price = 95000;
 			the_vehicle.created_on = new Date('Wed, 04 May 1949 22:00:00 GMT');
 
 			const obj = [the_vehicle, the_vehicle];
-			const reconstructed = reconstruct(ser, obj)
+			const reconstructed = reconstruct(ser, obj);
 
 			expect(obj).to.be.deep.equal(reconstructed);
 			expect(reconstructed[0]).to.be.equal(reconstructed[1]);
 		});
 
-		it('should preserve properties on classes', function () {
+		it('should preserve properties on classes', function() {
 			class Rectangle {
 				constructor() {
 					this.width = 10;
 					this.height = 20;
-					
+
 					Object.defineProperty(this, 'area', {
-						get: function () {
+						get: function() {
 							return this.width * this.height;
 						}
 					});
@@ -569,21 +582,21 @@ util.inspect.defaultOptions.colors = true;
 			expect(reconstructed.area).to.be.equal(200);
 			expect(reconstructed.perimeter).to.be.equal(60);
 		});
-		
+
 		it('should preserve properties on naked objects', function() {
 			const obj = {
 				get normal() {
 					return 1;
 				}
 			};
-			
+
 			const reconstructed = reconstruct(ser, obj);
-			
+
 			expect(obj).to.be.deep.equal(reconstructed);
 			expect(obj.normal).to.be.deep.equal(reconstructed.normal);
 		});
 
-		it('should preserve typed arrays', function () {
+		it('should preserve typed arrays', function() {
 			const obj = {
 				float32: new Float32Array([1.1, 2.2, 3.3, 5.5, 6.6, 10.01, 100.001]),
 				uint32: new Int32Array([1, 2, 3, 5, 6, 10, 100])
@@ -592,14 +605,14 @@ util.inspect.defaultOptions.colors = true;
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.be.deep.equal(reconstructed);
 		});
-		
+
 		it('should preserve DataViews', function() {
 			const obj = new DataView(new ArrayBuffer(16));
-			obj.setUint32( 0, 0xdeadbeef, true);
-			obj.setUint32( 4, 0xcafebabe, true);
-			obj.setUint32( 8, 0xcafebeef, true);
+			obj.setUint32(0, 0xdeadbeef, true);
+			obj.setUint32(4, 0xcafebabe, true);
+			obj.setUint32(8, 0xcafebeef, true);
 			obj.setUint32(12, 0xdeadbabe, true);
-			
+
 			const reconstructed = reconstruct(ser, obj);
 			expect(obj).to.be.deep.equal(reconstructed);
 		});
@@ -610,100 +623,108 @@ util.inspect.defaultOptions.colors = true;
 					super(...args);
 					this.extension = 1;
 				}
-			};
+			}
 			class XFunction extends Function {
 				constructor(...args) {
 					super(...args);
 					this.extension = 1;
 				}
-			};
+			}
 			class XArray extends Array {
-					constructor(...args) {
-						super(...args);
-						this.extension = 1;
-					}
-			};
+				constructor(...args) {
+					super(...args);
+					this.extension = 1;
+				}
+			}
 			class XNumber extends Number {
-					constructor(...args) {
-						super(...args);
-						this.extension = 1;
-					}
-			};
+				constructor(...args) {
+					super(...args);
+					this.extension = 1;
+				}
+			}
 			class XError extends Error {
-					constructor(...args) {
-						super(...args);
-						this.extension = 1;
-					}
-			};
+				constructor(...args) {
+					super(...args);
+					this.extension = 1;
+				}
+			}
 			class XRegExp extends RegExp {
-					constructor(...args) {
-						super(...args);
-						this.extension = 1;
-					}
-			};
+				constructor(...args) {
+					super(...args);
+					this.extension = 1;
+				}
+			}
 			class XBoolean extends Boolean {
-					constructor(...args) {
-						super(...args);
-						this.extension = 1;
-					}
-			};
+				constructor(...args) {
+					super(...args);
+					this.extension = 1;
+				}
+			}
 			class XMap extends Map {
-					constructor(...args) {
-						super(...args);
-						this.extension = 1;
-					}
-			};
+				constructor(...args) {
+					super(...args);
+					this.extension = 1;
+				}
+			}
 			class XSet extends Set {
-					constructor(...args) {
-						super(...args);
-						this.extension = 1;
-					}
-			};
+				constructor(...args) {
+					super(...args);
+					this.extension = 1;
+				}
+			}
 			class XDate extends Date {
-					constructor(...args) {
-						super(...args);
-						this.extension = 1;
-					}
-			};
+				constructor(...args) {
+					super(...args);
+					this.extension = 1;
+				}
+			}
 			class XArrayBuffer extends ArrayBuffer {
 				constructor(...args) {
 					super(...args);
 					this.extension = 1;
 				}
-			};
+			}
 			class XFloat32Array extends Float32Array {
-					constructor(...args) {
-						super(...args);
-						this.extension = 1;
-					}
-			};
+				constructor(...args) {
+					super(...args);
+					this.extension = 1;
+				}
+			}
 			class XDataView extends DataView {
 				constructor(...args) {
 					super(...args);
 					this.extension = 1;
 				}
-			};
+			}
 			const xser = new yas.yaserializer([XObject, XFunction, XArray, XNumber, XError, XRegExp, XBoolean, XMap, XSet, XDate, XArrayBuffer, XFloat32Array, XDataView]);
 
 			{
 				const xab = new XArrayBuffer(16);
 				const xdv = new XDataView(xab);
-				xdv.setUint32( 0, 0xdeadbeef, true);
-				xdv.setUint32( 4, 0xcafebabe, true);
-				xdv.setUint32( 8, 0xcafebeef, true);
+				xdv.setUint32(0, 0xdeadbeef, true);
+				xdv.setUint32(4, 0xcafebabe, true);
+				xdv.setUint32(8, 0xcafebeef, true);
 				xdv.setUint32(12, 0xdeadbabe, true);
 				const xa = XArray.from([1, 2, , 4, 5]);
 				delete xa[2];
-				
+
 				const obj = [
-					new XObject(), xa, new XNumber(3), new XRegExp(/\w+/g), new XBoolean(true),
-					new XMap([['a', 2], ['c', 4], ['z', 6], ['A', 12]]), new XSet([1, '2', 3]), new XDate(), xab,
-					new XFloat32Array([1.1, 2.2, 3.3, 5.5, 6.6, 10.01, 100.001]), xdv
+					new XObject(),
+					xa,
+					new XNumber(3),
+					new XRegExp(/\w+/g),
+					new XBoolean(true),
+					new XMap([['a', 2], ['c', 4], ['z', 6], ['A', 12]]),
+					new XSet([1, '2', 3]),
+					new XDate(),
+					xab,
+					new XFloat32Array([1.1, 2.2, 3.3, 5.5, 6.6, 10.01, 100.001]),
+					xdv
 				];
 
 				const reconstructed = reconstruct(xser, obj);
 				expect(obj).to.be.deep.equal(reconstructed);
-				
+
 				obj.forEach((value, idx) => {
 					expect(Object.prototype.toString.call(obj[idx])).to.equal(Object.prototype.toString.call(reconstructed[idx]));
 				});
@@ -718,13 +739,13 @@ util.inspect.defaultOptions.colors = true;
 				expect(obj[0].name).to.be.equal(reconstructed[0].name);
 				expect(obj[0].length).to.be.equal(reconstructed[0].length);
 				expect(obj[0].toString()).to.be.equal(reconstructed[0].toString());
-			
+
 				expect(reconstructed[1]).to.be.instanceof(Error);
 				expect(reconstructed[1]).to.be.instanceof(XError);
 				expect(obj[1].name).to.be.equal(reconstructed[1].name);
 				expect(obj[1].message).to.be.equal(reconstructed[1].message);
 				expect(obj[1].stack).to.be.equal(reconstructed[1].stack);
-			
+
 				obj.forEach((value, idx) => {
 					expect(Object.prototype.toString.call(obj[idx])).to.equal(Object.prototype.toString.call(reconstructed[idx]));
 				});
@@ -732,17 +753,17 @@ util.inspect.defaultOptions.colors = true;
 		});
 	});
 
-	describe('options change serialization and deserialization behaviour', function () {
-		it('should not preserve ignored members', function () {
+	describe('options change serialization and deserialization behaviour', function() {
+		it('should not preserve ignored members', function() {
 			class ExcludedMembers {
 				constructor() {
-					this.name                = 'always included';
+					this.name = 'always included';
 					this.$invocation_ignored = 'excluded by invocation options';
-					this.$class_ignored      = 'excluded by class options';
-					this.$global_ignored     = 'excluded by global options';
-					this._cache              = [];
-					this.$someOtherStuff     = 0;
-					}
+					this.$class_ignored = 'excluded by class options';
+					this.$global_ignored = 'excluded by global options';
+					this._cache = [];
+					this.$someOtherStuff = 0;
+				}
 			}
 			const global_options = { ignore: '$global_ignored' };
 			const ser = new yas.yaserializer([], global_options);
@@ -763,21 +784,21 @@ util.inspect.defaultOptions.colors = true;
 			expect(reconstructed.$serial_ignored).to.be.an('undefined');
 		});
 
-		it('should run on_deserialize during deserialization', function () {
+		it('should run on_deserialize during deserialization', function() {
 			class DeserializeAction {
 				constructor() {
 					this.name = 'unset';
 					this._cache = [];
 				}
-				
+
 				rebuild_cache() {
-					if(this._cache === undefined) {
+					if (this._cache === undefined) {
 						this._cache = [];
-					};
+					}
 					this._cache.push('rebuild_cache has been called');
 				}
 			}
-	
+
 			const ser = new yas.yaserializer([]);
 			const class_options = {
 				ignore: ['_cache'],
@@ -785,7 +806,7 @@ util.inspect.defaultOptions.colors = true;
 					obj.rebuild_cache();
 				}
 			};
-			
+
 			ser.make_class_serializable(DeserializeAction, class_options);
 
 			const obj = new DeserializeAction();
@@ -795,24 +816,24 @@ util.inspect.defaultOptions.colors = true;
 			expect(reconstructed._cache).to.be.deep.equal(['rebuild_cache has been called']);
 		});
 
-		it('should run on_post_deserialize after deserialization', function () {
+		it('should run on_post_deserialize after deserialization', function() {
 			class PostDeserializeAction {
 				constructor() {
 					this.name = 'unset';
 					this._cache = [];
 				}
-				
+
 				rebuild_cache() {
-					if(this._cache === undefined) {
+					if (this._cache === undefined) {
 						this._cache = [];
-					};
+					}
 					this._cache.push('rebuild_cache has been called');
 				}
 			}
-	
+
 			const ser = new yas.yaserializer();
 			const options = {
-				ignore: ['_cache' ],
+				ignore: ['_cache'],
 				on_post_deserialize: (obj) => {
 					obj.rebuild_cache();
 				}
@@ -827,23 +848,21 @@ util.inspect.defaultOptions.colors = true;
 		});
 	});
 
-	describe('general utility', function () {
-		const ser = new yas.yaserializer([]);
-			
+	describe('general utility', function() {
 		it('should let me perform final encoding in different ways', function() {
 			const BSON = require('bson');
-			const instance_options = { 
-				perform_encode:  BSON.serialize,
+			const instance_options = {
+				perform_encode: BSON.serialize,
 				perform_decode: BSON.deserialize
-			}
+			};
 			const bser = new yas.yaserializer([], instance_options);
-			
+
 			const obj = { d: new Date(), s: 'string', arr: [1, 2, 3] };
-			
+
 			const reconstructed = reconstruct(bser, obj);
 			expect(reconstructed).to.be.deep.equal(obj);
 		});
- 
+
 		it('should let me perform final encoding in more complex ways', function() {
 			const BSON = require('bson');
 			const zlib = require('zlib');
@@ -858,23 +877,23 @@ util.inspect.defaultOptions.colors = true;
 				}
 			};
 			const bcer = new yas.yaserializer([], instance_options);
-			
+
 			const obj = { d: new Date(), s: 'string', arr: [1, 2, 3] };
-			
+
 			const reconstructed = reconstruct(bcer, obj);
 			expect(reconstructed).to.be.deep.equal(obj);
 		});
-		
+
 		it('should automatically register decorated classes', function() {
 			// @serializable
 			class Test {
-			// 	field: string;
+				// 	field: string;
 
-			// 	@unserializable
-			// 	cache: any[];
+				// 	@unserializable
+				// 	cache: any[];
 
-			// 	@unserializable
-			// 	version: number;
+				// 	@unserializable
+				// 	version: number;
 
 				constructor() {
 					this.field = 'Hello, world!';
@@ -882,39 +901,39 @@ util.inspect.defaultOptions.colors = true;
 					this.version = 1;
 				}
 
-			//	@serializer
+				//	@serializer
 				static serialize(obj) {
 					return [obj.field + ' serialized form', false];
 				}
 
-			//	@deserializer
+				//	@deserializer
 				static deserialize(structured, destructured) {
 					structured.field = destructured + ' reconstituted';
 					return false;
 				}
 
-			// 	@deserialize_action
+				// 	@deserialize_action
 				rebuild() {
 					this.cache = ['rebuilt'];
 					this.version = 20;
 				}
-			};
+			}
 			const obj = new Test();
-			
+
 			Reflect.decorate([yas.serializable], Test);
 			Reflect.decorate([yas.unserializable], obj, 'cache');
 			Reflect.decorate([yas.unserializable], obj, 'version');
 			Reflect.decorate([yas.serializer], Test, 'serialize');
 			Reflect.decorate([yas.deserializer], Test, 'deserialize');
 			Reflect.decorate([yas.deserialize_action], obj, 'rebuild');
-			
+
 			const serialized_form = new yas.yaserializer([]).serialize(obj);
-			const reconstructed   = new yas.yaserializer([]).deserialize(serialized_form);
-			
+			const reconstructed = new yas.yaserializer([]).deserialize(serialized_form);
+
 			expect(reconstructed.cache).to.be.deep.equal(['rebuilt']);
 			expect(reconstructed.version).to.be.equal(20);
 			expect(reconstructed.field).to.be.equal('Hello, world! serialized form reconstituted');
 			expect(reconstructed).to.be.instanceof(Test);
 		});
 	});
-}());
+})();
