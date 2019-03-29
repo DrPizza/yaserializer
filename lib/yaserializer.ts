@@ -515,7 +515,6 @@ class yaserializer {
 		                  : raw_name.match(/.*\[.*\]/)         ? '[Symbol.for("' + raw_name.substring(raw_name.indexOf('[') + 1, raw_name.indexOf(']')) + '")]'
 		                  :                                      raw_name;
 		// eval in global scope
-		console.log(prelude + head + function_decl + cooked_name + body + tail);
 		const obj = (1, eval)(prelude + head + function_decl + cooked_name + body + tail) as Function;
 		Object.setPrototypeOf(obj, null);
 		const descs = Object.getOwnPropertyDescriptors(obj);
