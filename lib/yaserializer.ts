@@ -116,8 +116,8 @@ class registration {
 	clazz: arbitrary_ctor;
 	base : arbitrary_ctor;
 	builder: base_class_builder;
-	serialize_func?: (structured: any) => [any, boolean];
-	deserialize_func?: (structured: any, destructured: any) => boolean;
+	serialize_func?: (structured: any, inner_serialize: (structured: any) => any) => [any, boolean];
+	deserialize_func?: (structured: any, destructured: any, inner_deserialize: (destructured: any) => any) => boolean;
 	class_options?: options;
 
 	constructor(clazz: arbitrary_ctor,
@@ -458,7 +458,7 @@ class yaserializer {
 
 	private serialize_function_like(structured: Function, ctxt: serialization_context, reg: registration): any {
 		if(!/\[native code\]/.test(structured.toString())) {
-			return [this.serialize_primitive(structured.name, ctxt), structured.toString()];
+			return [this.serialize_primitive(structured.name, ctxt), this.serialize_primitive(structured.toString(), ctxt)];
 		} else {
 			throw new Error(`can't serialize native functions`);
 		}
@@ -469,13 +469,14 @@ class yaserializer {
 		const strict_environment = !destructured.hasOwnProperty('caller');
 		const prelude = strict_environment ? `'use strict'; ` : '';
 		const raw_name = this.deserialize_primitive(destructured[0], ctxt);
+		const raw_body = this.deserialize_primitive(destructured[1], ctxt);
 		// TODO is there an elegant way to retrieve the real (caller's) name from here,
 		// as that doesn't get flattened into a string
 		if(!raw_name.match(/Symbol\..*/)
 		&& !raw_name.match(/get .*/)
 		&& !raw_name.match(/set .*/)) {
 			const name = raw_name && raw_name !== 'anonymous' ? `const ${raw_name} = ` : '(';
-			const body = destructured[1];
+			const body = raw_body;
 			const tail = raw_name && raw_name !== 'anonymous' ? `; ${raw_name};` : ')';
 			return (1, eval)(prelude + name + body + tail) as Function;
 		}
@@ -494,7 +495,7 @@ class yaserializer {
 		case 'AsyncGeneratorFunction':
 			function_decl = 'async * ';
 		}
-		let processed_body = destructured[1].replace(/get /, '').replace(/set /, '').replace(/async /, '').trim().replace(/^\*/, '').trim().replace(/^\[[^]+\]/, '').replace(/^[^(]*/, '');
+		let processed_body = raw_body.replace(/get /, '').replace(/set /, '').replace(/async /, '').trim().replace(/^\*/, '').trim().replace(/^\[[^]+\]/, '').replace(/^[^(]*/, '');
 		const head = 'const x = { ';
 		const body = processed_body;
 		const tail = `}; x;`;
@@ -553,7 +554,10 @@ class yaserializer {
 		destructured['X'] = reg.builder.serialize(structured, ctxt, reg);
 
 		if(reg.serialize_func) {
-			let [custom, perform_generic_serialization] = reg.serialize_func(structured);
+			const serialize_deeper = (structured: any) => {
+				return this.serialize_primitive(structured, ctxt);
+			};
+			let [custom, perform_generic_serialization] = reg.serialize_func(structured, serialize_deeper);
 			destructured['Y'] = custom;
 			if(!perform_generic_serialization) {
 				return destructured;
@@ -651,7 +655,10 @@ class yaserializer {
 		Object.setPrototypeOf(structured, reg.clazz.prototype ? reg.clazz.prototype : null);
 
 		if(reg.deserialize_func) {
-			let perform_generic_deserialization = reg.deserialize_func(structured, destructured['Y']);
+			const deserialize_deeper = (destructured: any) => {
+				return this.deserialize_primitive(destructured, ctxt);
+			};
+			let perform_generic_deserialization = reg.deserialize_func(structured, destructured['Y'], deserialize_deeper);
 			if(!perform_generic_deserialization) {
 				return structured;
 			}

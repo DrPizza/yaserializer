@@ -897,24 +897,30 @@ util.inspect.defaultOptions.colors = true;
 
 				constructor() {
 					this.field = 'Hello, world!';
-					this.cache = [];
+					this.cache = [{'a': 1234n}];
 					this.version = 1;
 				}
 
 				//	@serializer
-				static serialize(obj) {
-					return [obj.field + ' serialized form', false];
+				static serialize(obj, deeper) {
+					return [
+						{
+							'x': obj.field + ' serialized from',
+							'y': deeper(obj.cache)
+						},
+						false
+					];
 				}
 
 				//	@deserializer
-				static deserialize(structured, destructured) {
-					structured.field = destructured + ' reconstituted';
+				static deserialize(structured, destructured, deeper) {
+					structured.field = destructured.x + ' reconstituted';
+					structured.cache = deeper(destructured.y);
 					return false;
 				}
 
 				// 	@deserialize_action
 				rebuild() {
-					this.cache = ['rebuilt'];
 					this.version = 20;
 				}
 			}
@@ -930,9 +936,8 @@ util.inspect.defaultOptions.colors = true;
 			const serialized_form = new yas.yaserializer([]).serialize(obj);
 			const reconstructed = new yas.yaserializer([]).deserialize(serialized_form);
 
-			expect(reconstructed.cache).to.be.deep.equal(['rebuilt']);
 			expect(reconstructed.version).to.be.equal(20);
-			expect(reconstructed.field).to.be.equal('Hello, world! serialized form reconstituted');
+			expect(reconstructed.field).to.be.equal('Hello, world! serialized from reconstituted');
 			expect(reconstructed).to.be.instanceof(Test);
 		});
 	});
