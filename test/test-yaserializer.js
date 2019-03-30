@@ -624,6 +624,12 @@ util.inspect.defaultOptions.colors = true;
 					this.extension = 1;
 				}
 			}
+			class XString extends String {
+				constructor(...args) {
+					super(...args);
+					this.extension = 1;
+				}
+			}
 			class XFunction extends Function {
 				constructor(...args) {
 					super(...args);
@@ -696,7 +702,7 @@ util.inspect.defaultOptions.colors = true;
 					this.extension = 1;
 				}
 			}
-			const xser = new yas.yaserializer([XObject, XFunction, XArray, XNumber, XError, XRegExp, XBoolean, XMap, XSet, XDate, XArrayBuffer, XFloat32Array, XDataView]);
+			const xser = new yas.yaserializer([XObject, XString, XFunction, XArray, XNumber, XError, XRegExp, XBoolean, XMap, XSet, XDate, XArrayBuffer, XFloat32Array, XDataView]);
 
 			{
 				const xab = new XArrayBuffer(16);
@@ -710,6 +716,7 @@ util.inspect.defaultOptions.colors = true;
 
 				const obj = [
 					new XObject(),
+					new XString('str'),
 					xa,
 					new XNumber(3),
 					new XRegExp(/\w+/g),
