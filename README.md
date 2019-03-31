@@ -14,6 +14,8 @@ As with any JavaScript serialization library, there's some things that can't be 
 
 I've only written and tested on Node 11.12, which is current at the time of writing. I'm using TypeScript, because it really does make writing JavaScript less painful. There's preliminary support for decorators, too, using the `Reflect` metadata API. With this, you can write self-registering classes that can mark fields as non-serialized, plumb in custom serialization methods, and set up post-deserialization functions.
 
+The output format is not stable and there is no guarantee that you'll be able to decode data from one version in another version. This might change in the future once I'm happy with the overall behaviour of the library. The output is encoded as arrays with a separate string table. The array portion can optionally be packed into a single string with limited RLE compression and a dense base64 encoding, by setting the option `use_packed_format` to `true`.
+
 # Some code snippets I guess
 
 Ignores:
@@ -66,8 +68,7 @@ class Test {
 	}
 
 	// serializer method returns a pair. the first element 
-	// contains the serialized data using only those data
-	// types and structures that are compatible with JSON.
+	// contains the custom serialized data.
 	// the second is 'true' to augment the custom serialization
 	// with the usual brute force property-by-property
 	// serialization, 'false' to skip it and rely only on 
@@ -88,8 +89,8 @@ class Test {
 		return false;
 	}
 
- 	// executed after the entire object graph is deserialized. 
- 	@yas.deserialize_action
+	// executed after the entire object graph is deserialized. 
+	@yas.deserialize_action
 	rebuild() {
 		this.cache = ['rebuilt'];
 		this.version = 20;
