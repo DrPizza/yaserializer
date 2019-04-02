@@ -482,10 +482,13 @@ class yaserializer {
 		});
 		return structured;
 	}
+	
+	static regexp_specials = /[\\^$.*+?()[\]{}|]/g;
+	static is_native_re = RegExp(`^${Function.prototype.toString.call(Object.prototype.hasOwnProperty).replace(yaserializer.regexp_specials, '\\$&').replace(/hasOwnProperty|(function).*?(?=\\\()| for .+?(?=\\\])/g, '$1.*?')}$`);
 
 	private serialize_function_like(structured: Function, ctxt: serialization_context, reg: registration): any {
-		if(!/\[native code\]/.test(structured.toString())) {
-			return [this.serialize_primitive(structured.name, ctxt), this.serialize_primitive(structured.toString(), ctxt)];
+		if(!yaserializer.is_native_re.test(structured.toString())) {
+			return [this.serialize_primitive(structured.name, ctxt), this.serialize_primitive(structured.toString(), ctxt), this.serialize_primitive(!Object.prototype.hasOwnProperty.call(structured, 'caller'), ctxt) ];
 		} else {
 			throw new Error(`can't serialize native functions`);
 		}
@@ -493,10 +496,10 @@ class yaserializer {
 
 	private deserialize_function_like(destructured: any, ctxt: serialization_context, reg: registration): Function {
 		// there must be a better way, surely...
-		const strict_environment = !destructured.hasOwnProperty('caller');
-		const prelude = strict_environment ? `'use strict'; ` : '';
 		const raw_name = this.deserialize_primitive(destructured[0], ctxt);
 		const raw_body = this.deserialize_primitive(destructured[1], ctxt);
+		const strict_environment = this.deserialize_primitive(destructured[2], ctxt);
+		const prelude = strict_environment ? `'use strict'; ` : '';
 		// TODO is there an elegant way to retrieve the real (caller's) name from here,
 		// as that doesn't get flattened into a string
 		if(!raw_name.match(/Symbol\..*/)

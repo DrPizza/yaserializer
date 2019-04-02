@@ -383,16 +383,30 @@ util.inspect.defaultOptions.colors = true;
 			describe('functions', function() {
 				const ser = new yas.yaserializer();
 		
-				it('should serialize a normal function', function() {
-					const obj = function(arg) {
-						console.log(`Hello, ${arg}`);
-					};
+				it('should serialize a strict normal function', function() {
+					const obj = (1, eval)('"use strict"; (function(arg) { console.log(`Hello, ${arg}`); })');
+
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+		
+				it('should serialize a non-strict normal function', function() {
+					const obj = (1, eval)('(function(arg) { console.log(`Hello, ${arg}`); })');
 		
 					const reconstructed = reconstruct(ser, obj);
 					// deep-eql does not seem to be able to compare functions directly
 					expect(reconstructed).to.be.instanceof(Function);
 					expect(obj.name).to.be.equal(reconstructed.name);
 					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(obj.caller).to.be.equal(reconstructed.caller);
 					expect(obj.toString()).to.be.equal(reconstructed.toString());
 					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 				});
