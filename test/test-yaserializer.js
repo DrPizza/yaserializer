@@ -14,7 +14,7 @@ util.inspect.defaultOptions.colors = true;
 (function() {
 	'use strict';
 
-	const verbose_by_default = true;
+	const verbose_by_default = false;
 	const packed_options = [false, true];
 
 	packed_options.map(function (pack) {
