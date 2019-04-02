@@ -11,7 +11,7 @@
     "url": "https://github.com/DrPizza/yaserializer"
   },
   "devDependencies": {
-    "@types/node": "^11.12.2",
+    "@types/node": "^11.13.0",
     "bson": "^4.0.2",
     "chai": "^4.2.0",
     "concurrently": "^4.1.0",

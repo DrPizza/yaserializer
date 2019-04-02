@@ -14,11 +14,11 @@ util.inspect.defaultOptions.colors = true;
 (function() {
 	'use strict';
 
+	const verbose_by_default = true;
 	const packed_options = [false, true];
 
 	packed_options.map(function (pack) {
 		const pack_by_default = pack;
-		const verbose_by_default = false;
 
 		function reconstruct(ser, obj, packed = pack_by_default, verbose = verbose_by_default) {
 			let options = { use_packed_format: packed };
@@ -330,25 +330,45 @@ util.inspect.defaultOptions.colors = true;
 				});
 		
 				it('should handle cyclic structures', function() {
-					const obj1 = { which: 1, parent: null, children: [] };
-					const obj2 = { which: 2, parent: obj1, children: [] };
-					const obj3 = { which: 3, parent: obj1, children: [] };
-					const obj4 = { which: 4, parent: obj2, children: [] };
-					const obj5 = { which: 5, parent: obj2, children: [] };
-					const obj6 = { which: 6, parent: obj2, children: [] };
-					const obj7 = { which: 7, parent: obj4, children: [] };
-					const obj8 = { which: 8, parent: obj4, children: [] };
-					obj1.children = [obj2, obj3];
-					obj2.children = [obj4, obj5, obj6];
-					obj3.children = [obj7, obj8];
-					obj1.parent = obj5;
+					const obj0 = { which: 0x0, parent: null, children: [] };
+					const obj1 = { which: 0x1, parent: obj0, children: [] };
+					const obj2 = { which: 0x2, parent: obj0, children: [] };
+					const obj3 = { which: 0x3, parent: obj0, children: [] };
+					const obj4 = { which: 0x4, parent: obj1, children: [] };
+					const obj5 = { which: 0x5, parent: obj1, children: [] };
+					const obj6 = { which: 0x6, parent: obj1, children: [] };
+					const obj7 = { which: 0x7, parent: obj2, children: [] };
+					const obj8 = { which: 0x8, parent: obj2, children: [] };
+					const obj9 = { which: 0x9, parent: obj2, children: [] };
+					const obja = { which: 0xa, parent: obj3, children: [] };
+					const objb = { which: 0xb, parent: obj3, children: [] };
+					const objc = { which: 0xc, parent: obj3, children: [] };
+					obj0.children = [obj1, obj2, obj3];
+					
+					obj1.children = [obj4, obj5, obj6];
+					obj2.children = [obj7, obj8, obj9];
+					obj3.children = [obja, objb, objc];
+					
+					obj4.children = [obj4, obj7, obja];
+					obj5.children = [obj5, obj8, objb];
+					obj6.children = [obj6, obj9, objc];
+					
+					obj7.children = [obj4, obj7, obja];
+					obj8.children = [obj5, obj8, objb, obj0];
+					obj9.children = [obj6, obj9, objc];
+					
+					obja.children = [obj4, obj7, obja];
+					objb.children = [obj5, obj8, objb];
+					objc.children = [obj6, obj9, objc];
+					
+					obj0.parent = obj8;
 		
 					expect(function() {
-						return JSON.stringify(obj1);
+						return JSON.stringify(obj0);
 					}).to.throw();
 		
-					const reconstructed = reconstruct(ser, obj1);
-					expect(obj1).to.be.deep.equal(reconstructed);
+					const reconstructed = reconstruct(ser, obj0);
+					expect(obj0).to.be.deep.equal(reconstructed);
 				});
 				
 				it('should handle more cyclic structures', function() {
@@ -926,8 +946,8 @@ util.inspect.defaultOptions.colors = true;
 				it('should let me perform final encoding in different ways', function() {
 					const BSON = require('bson');
 					const instance_options = {
-						perform_encode: BSON.serialize,
-						perform_decode: BSON.deserialize
+						perform_encode: function(obj) { return BSON.serialize({'a':obj});},
+						perform_decode: function(obj) { return BSON.deserialize(obj).a; }
 					};
 					const bser = new yas.yaserializer([], instance_options);
 		
@@ -942,12 +962,12 @@ util.inspect.defaultOptions.colors = true;
 					const zlib = require('zlib');
 					const instance_options = {
 						perform_encode: function(obj) {
-							const serial_form = BSON.serialize(obj);
+							const serial_form = BSON.serialize({'a':obj});
 							return zlib.deflateSync(serial_form);
 						},
 						perform_decode: function(obj) {
 							const serial_form = zlib.inflateSync(obj);
-							return BSON.deserialize(serial_form);
+							return BSON.deserialize(serial_form).a;
 						}
 					};
 					const bcer = new yas.yaserializer([], instance_options);

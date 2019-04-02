@@ -138,6 +138,27 @@ class registration {
 
 type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array;
 
+enum primitive_type {
+	object = 0,
+	string = 1,
+	positive_integer = 2,
+	negative_integer = 3,
+	other_number = 4,
+	boolean = 5,
+	bigint = 6,
+	symbol = 7,
+	special = 8
+}
+
+enum special_type {
+	undefined = 0,
+	null = 1,
+	nan = 2,
+	plus_infinity = 3,
+	minus_infinity = 4,
+	minus_zero = 5,
+}
+
 class yaserializer {
 	static typed_array_types = [
 		Int8Array, Uint8Array, Uint8ClampedArray, Int16Array, Uint16Array, Int32Array, Uint32Array, Float32Array, Float64Array, BigInt64Array, BigUint64Array
@@ -812,48 +833,48 @@ class yaserializer {
 
 	private serialize_primitive(structured: any, ctxt: serialization_context): any {
 		if(structured === undefined) {
-			return [ 8, 0 ];
+			return [ primitive_type.special, special_type.undefined ];
 		}
 		if(structured === null) {
-			return [ 8, 1 ];
+			return [ primitive_type.special, special_type.null ];
 		}
 		if(typeof structured === 'number' && Number.isNaN(structured)) {
-			return [ 8, 2 ];
+			return [ primitive_type.special, special_type.nan ];
 		}
 		if(typeof structured === 'number' && !Number.isFinite(structured) && structured > 0) {
-			return [ 8, 3 ];
+			return [ primitive_type.special, special_type.plus_infinity ];
 		}
 		if(typeof structured === 'number' && !Number.isFinite(structured) && structured < 0) {
-			return [ 8, 4 ];
+			return [ primitive_type.special, special_type.minus_infinity ];
 		}
 		if(typeof structured === 'number' && Object.is(structured, -0)) {
-			return [ 8, 5 ];
+			return [ primitive_type.special, special_type.minus_zero ];
 		}
 
 		switch(typeof structured) {
 		case 'function':
 		case 'object':
-			return [ 0, this.serialize_object(structured, ctxt)];
+			return [ primitive_type.object, this.serialize_object(structured, ctxt)];
 		case 'string':
-			return [ 1, ctxt.find_string_index(structured) ];
+			return [ primitive_type.string, ctxt.find_string_index(structured) ];
 		case 'number':
 		if(Number.isSafeInteger(structured)) {
 				if(structured >= 0) {
-					return [ 2, structured ];
+					return [ primitive_type.positive_integer, structured ];
 				} else {
-					return [ 3, -structured ];
+					return [ primitive_type.negative_integer, -structured ];
 				}
 			} else {
 				let translator = new DataView(new ArrayBuffer(8));
 				translator.setFloat64(0, structured);
-				return [4, translator.getUint32(0), translator.getUint32(4)];
+				return [ primitive_type.other_number, translator.getUint32(0), translator.getUint32(4) ];
 			}
 		case 'boolean':
-			return [ 5, structured ? 1 : 0 ]
+			return [ primitive_type.boolean, structured ? 1 : 0 ]
 		case 'bigint':
-			return [ 6, this.serialize_bigint(structured, ctxt) ];
+			return [ primitive_type.bigint, this.serialize_bigint(structured, ctxt) ];
 		case 'symbol':
-			return [ 7, this.serialize_symbol(structured, ctxt) ];
+			return [ primitive_type.symbol, this.serialize_symbol(structured, ctxt) ];
 		default:
 			throw new Error(`don't know how to serialize an object with type ${typeof structured}`);
 		}
@@ -863,35 +884,35 @@ class yaserializer {
 		switch(typeof destructured) {
 		case 'object':
 			switch(destructured[0]) {
-			case 0:
+			case primitive_type.object:
 				return this.deserialize_object(destructured[1], ctxt);
-			case 1:
+			case primitive_type.string:
 				return String(ctxt.string_table[Number(destructured[1])]);
-			case 2:
+			case primitive_type.positive_integer:
 				return Number(destructured[1]);
-			case 3:
+			case primitive_type.negative_integer:
 				return -Number(destructured[1]);
-			case 4:
+			case primitive_type.other_number:
 				{
 					let translator = new DataView(new ArrayBuffer(8));
 					translator.setUint32(0, destructured[1]);
 					translator.setUint32(4, destructured[2]);
 					return translator.getFloat64(0);
 				}
-			case 5:
+			case primitive_type.boolean:
 				return !!(destructured[1]);
-			case 6:
+			case primitive_type.bigint:
 				return this.deserialize_bigint(destructured[1], ctxt);
-			case 7:
+			case primitive_type.symbol:
 				return this.deserialize_symbol(destructured[1], ctxt);
-			case 8: {
+			case primitive_type.special: {
 				switch(destructured[1]) {
-				case 0: return undefined;
-				case 1: return null;
-				case 2: return NaN;
-				case 3: return Infinity;
-				case 4: return -Infinity;
-				case 5: return -0;
+				case special_type.undefined     : return undefined;
+				case special_type.null          : return null;
+				case special_type.nan           : return NaN;
+				case special_type.plus_infinity : return Infinity;
+				case special_type.minus_infinity: return -Infinity;
+				case special_type.minus_zero    : return -0;
 				default: 
 					throw new Error(`don't know how to decode a special of value ${destructured[1]}`);
 				}
@@ -909,13 +930,13 @@ class yaserializer {
 		function encode(s: string): [number, string] {
 			const symbols = '[],0123456789';
 			const base_64_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-			// 3 repeats of x = Ax
-			// 4 repeats of x = Bx
-			// 5 repeats of x = Cx
+			// 3 repeats of x = Dx
+			// 4 repeats of x = Ex
+			// 5 repeats of x = Fx
 			for(let ch of symbols) {
-				s = s.replace(ch.repeat(5), 'C' + ch);
-				s = s.replace(ch.repeat(4), 'B' + ch);
-				s = s.replace(ch.repeat(3), 'A' + ch);
+				s = s.replace(ch.repeat(5), 'F' + ch);
+				s = s.replace(ch.repeat(4), 'E' + ch);
+				s = s.replace(ch.repeat(3), 'D' + ch);
 			}
 			let compacted = [];
 			for(let i = 0; i < s.length; ++i) {
@@ -933,9 +954,9 @@ class yaserializer {
 				case '[': compacted.push(0xa); break;
 				case ']': compacted.push(0xb); break;
 				case ',': compacted.push(0xc); break;
-				case 'A': compacted.push(0xd); break;
-				case 'B': compacted.push(0xe); break;
-				case 'C': compacted.push(0xf); break;
+				case 'D': compacted.push(0xd); break;
+				case 'E': compacted.push(0xe); break;
+				case 'F': compacted.push(0xf); break;
 				default: throw new Error(`can't compact symbol ${s.charAt(i)}`);
 				}
 			}
@@ -993,21 +1014,21 @@ class yaserializer {
 				case 0xa: result += '['; break;
 				case 0xb: result += ']'; break;
 				case 0xc: result += ','; break;
-				case 0xd: result += 'A'; break;
-				case 0xe: result += 'B'; break;
-				case 0xf: result += 'C'; break;
+				case 0xd: result += 'D'; break;
+				case 0xe: result += 'E'; break;
+				case 0xf: result += 'F'; break;
 				}
 			}
 			for(let ch of symbols) {
-				result = result.replace('A' + ch, ch.repeat(3));
-				result = result.replace('B' + ch, ch.repeat(4));
-				result = result.replace('C' + ch, ch.repeat(5));
+				result = result.replace('D' + ch, ch.repeat(3));
+				result = result.replace('E' + ch, ch.repeat(4));
+				result = result.replace('F' + ch, ch.repeat(5));
 			}
 			return JSON.parse(result);
 		}
-		let raw_object = { 'A': [dense_structure[0], decode(dense_structure[1])] };
+		let raw_object = [ dense_structure[0], decode(dense_structure[1])];
 		if(2 in dense_structure) {
-			raw_object.A.push(decode(dense_structure[2]));
+			raw_object.push(decode(dense_structure[2]));
 		}
 		return raw_object;
 	}
@@ -1026,9 +1047,9 @@ class yaserializer {
 			}
 		} else {
 			if(implicit_root) {
-				serialized = { 'A': [ctxt.string_table, ctxt.destructured_table ] };
+				serialized = [ ctxt.string_table, ctxt.destructured_table ];
 			} else {
-				serialized = { 'A': [ctxt.string_table, ctxt.destructured_table, destructured ] };
+				serialized = [ ctxt.string_table, ctxt.destructured_table, destructured ];
 			}
 		}
 		if(options && options.perform_encode) {
@@ -1049,18 +1070,17 @@ class yaserializer {
 		|| (this.global_options && this.global_options.use_packed_format)) {
 			raw_object = this.dense_decode(raw_object);
 		}
-		if(!raw_object.hasOwnProperty('A')
-		|| !Array.isArray(raw_object.A)
-		|| (raw_object.A.length != 3 && raw_object.A.length !== 2)) {
-			throw new Error(`invalid serialization data: ${Array.prototype.slice.call(data, 0, 16)}...`);
+		if(!Array.isArray(raw_object)
+		|| (raw_object.length != 3 && raw_object.length !== 2)) {
+			throw new Error(`invalid serialization data: ${Array.prototype.slice.call(data, 0, 16)}... produced ${util.inspect(raw_object)}`);
 		}
-		if(raw_object.A.length === 2) {
-			raw_object.A.push([0,0]);
+		if(raw_object.length === 2) {
+			raw_object.push([0,0]);
 		}
 		const ctxt = new serialization_context(options);
-		ctxt.string_table = raw_object.A[0];
-		ctxt.destructured_table = raw_object.A[1];
-		const deserialized = placeholder.try_snap(this.deserialize_primitive(raw_object.A[2], ctxt));
+		ctxt.string_table = raw_object[0];
+		ctxt.destructured_table = raw_object[1];
+		const deserialized = placeholder.try_snap(this.deserialize_primitive(raw_object[2], ctxt));
 		ctxt.post_deserialization_actions.forEach((action: (() => any)) => {
 			action();
 		});
