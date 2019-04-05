@@ -383,8 +383,8 @@ util.inspect.defaultOptions.colors = true;
 			describe('functions', function() {
 				const ser = new yas.yaserializer();
 		
-				it('should serialize a strict normal function', function() {
-					const obj = (1, eval)('"use strict"; (function(arg) { console.log(`Hello, ${arg}`); })');
+				it('should serialize an anonymous strict normal function', function() {
+					const obj = (1, eval)('"use strict"; (function(arg) { return `Hello, ${arg}`; })');
 
 					const reconstructed = reconstruct(ser, obj);
 					// deep-eql does not seem to be able to compare functions directly
@@ -398,8 +398,8 @@ util.inspect.defaultOptions.colors = true;
 					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 				});
 		
-				it('should serialize a non-strict normal function', function() {
-					const obj = (1, eval)('(function(arg) { console.log(`Hello, ${arg}`); })');
+				it('should serialize an anonymous non-strict normal function', function() {
+					const obj = (1, eval)('(function(arg) { return `Hello, ${arg}`; })');
 		
 					const reconstructed = reconstruct(ser, obj);
 					// deep-eql does not seem to be able to compare functions directly
@@ -411,49 +411,199 @@ util.inspect.defaultOptions.colors = true;
 					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
 				});
 		
+				it('should serialize an anonymous strict async function', function() {
+					const obj = (1, eval)('"use strict"; (async function(arg) { return await `Hello, ${arg}`; })');
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize an anonymous strict generator function', function() {
+					const obj = (1, eval)('"use strict"; (function*(arg) { yield `Hello, ${arg}`; })');
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize an anonymous strict async generator function', function() {
+					const obj = (1, eval)('"use strict"; (async function*(arg) { yield await `Hello, ${arg}`; })');
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize a named strict normal function', function() {
+					const obj = (1, eval)('"use strict"; (function foo(arg) { console.log(`Hello, ${arg}`); })');
+
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+		
+				it('should serialize a named non-strict normal function', function() {
+					const obj = (1, eval)('(function foo(arg) { console.log(`Hello, ${arg}`); })');
+		
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(obj.caller).to.be.equal(reconstructed.caller);
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize a named strict async function', function() {
+					const obj = (1, eval)('"use strict"; (async function foo(arg) { return await `Hello, ${arg}`; })');
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize a named strict generator function', function() {
+					const obj = (1, eval)('"use strict"; (function* foo(arg) { yield `Hello, ${arg}`; })');
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize a named strict async generator function', function() {
+					const obj = (1, eval)('"use strict"; (async function* foo(arg) { yield await `Hello, ${arg}`; })');
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize a named strict normal method', function() {
+					const obj = (1, eval)('"use strict"; ( { foo(arg) { return `Hello, ${arg}`; } }.foo)');
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize a named strict async method', function() {
+					const obj = (1, eval)('"use strict"; ( { async foo(arg) { return await `Hello, ${arg}`; } }.foo)');
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize a named strict generator method', function() {
+					const obj = (1, eval)('"use strict"; ( { * foo(arg) { yield `Hello, ${arg}`; } }.foo)');
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize a named strict async generator method', function() {
+					const obj = (1, eval)('"use strict"; ( { async * foo(arg) { yield await `Hello, ${arg}`; } }.foo)');
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(function() {
+						return reconstructed.caller;
+					}).to.throw();
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+				it('should serialize a class function', function() {
+					class Test {
+						constructor() {
+							this.field = 'Hello, World!';
+						}
+						
+						foo() {
+							console.log(this.field);
+						}
+					}
+				
+					const obj = Test.prototype.foo;
+
+					const reconstructed = reconstruct(ser, obj);
+					// deep-eql does not seem to be able to compare functions directly
+					expect(reconstructed).to.be.instanceof(Function);
+					expect(obj.name).to.be.equal(reconstructed.name);
+					expect(obj.length).to.be.equal(reconstructed.length);
+					expect(obj.toString()).to.be.equal(reconstructed.toString());
+					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
+				});
+
+		
 				it('should serialize a Function object', function() {
 					const obj = new Function('a', 'b', 'return a + b;');
-		
-					const reconstructed = reconstruct(ser, obj);
-					// deep-eql does not seem to be able to compare functions directly
-					expect(reconstructed).to.be.instanceof(Function);
-					expect(obj.name).to.be.equal(reconstructed.name);
-					expect(obj.length).to.be.equal(reconstructed.length);
-					expect(obj.toString()).to.be.equal(reconstructed.toString());
-					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
-				});
-		
-				it('should serialize an async function', function() {
-					const obj = async function(arg) {
-						return await `Hello, ${arg}`;
-					};
-					const reconstructed = reconstruct(ser, obj);
-					// deep-eql does not seem to be able to compare functions directly
-					expect(reconstructed).to.be.instanceof(Function);
-					expect(obj.name).to.be.equal(reconstructed.name);
-					expect(obj.length).to.be.equal(reconstructed.length);
-					expect(obj.toString()).to.be.equal(reconstructed.toString());
-					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
-				});
-		
-				it('should serialize a generator function', function() {
-					const obj = function*(arg) {
-						yield `Hello, ${arg}`;
-					};
-		
-					const reconstructed = reconstruct(ser, obj);
-					// deep-eql does not seem to be able to compare functions directly
-					expect(reconstructed).to.be.instanceof(Function);
-					expect(obj.name).to.be.equal(reconstructed.name);
-					expect(obj.length).to.be.equal(reconstructed.length);
-					expect(obj.toString()).to.be.equal(reconstructed.toString());
-					expect(Object.prototype.toString.call(obj)).to.equal(Object.prototype.toString.call(reconstructed));
-				});
-		
-				it('should serialize an async generator function', function() {
-					const obj = async function*(arg) {
-						yield `Hello, ${arg}`;
-					};
 		
 					const reconstructed = reconstruct(ser, obj);
 					// deep-eql does not seem to be able to compare functions directly
@@ -647,7 +797,7 @@ util.inspect.defaultOptions.colors = true;
 					expect(obj).to.be.deep.equal(reconstructed);
 				});
 
-				it('should preserve properties on classes', function() {
+				it('should preserve properties on class instances', function() {
 					class Rectangle {
 						constructor() {
 							this.width = 10;
@@ -882,9 +1032,9 @@ util.inspect.defaultOptions.colors = true;
 					const obj = new ExcludedMembers();
 					obj._cache = [1, 2, 3];
 		
-					const invocation_options = { ignore: '$invocation_ignored' };
+					const invocation_options = { ignore: '$invocation_ignored', use_packed_format: pack_by_default };
 					const serialized_form = ser.serialize(obj, invocation_options);
-					const reconstructed = ser.deserialize(serialized_form);
+					const reconstructed = ser.deserialize(serialized_form, invocation_options);
 		
 					expect('always included').to.be.equal(reconstructed.name);
 					expect(reconstructed.$invocation_ignored).to.be.an('undefined');
@@ -1041,8 +1191,8 @@ util.inspect.defaultOptions.colors = true;
 					Reflect.decorate([yas.deserializer], Test, 'deserialize');
 					Reflect.decorate([yas.deserialize_action], obj, 'rebuild');
 		
-					const serialized_form = new yas.yaserializer([]).serialize(obj, { use_packed_format: true });
-					const reconstructed = new yas.yaserializer([]).deserialize(serialized_form, { use_packed_format: true });
+					const serialized_form = new yas.yaserializer([]).serialize(obj, { use_packed_format: pack_by_default });
+					const reconstructed = new yas.yaserializer([]).deserialize(serialized_form, { use_packed_format: pack_by_default });
 		
 					expect(reconstructed.version).to.be.equal(20);
 					expect(reconstructed.field).to.be.equal('Hello, world! serialized from reconstituted');

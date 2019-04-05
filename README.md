@@ -30,7 +30,7 @@ class ExcludedMembers {
 		this.$global_ignored     = 'excluded by global options';
 		this._cache              = [];
 		this.$someOtherStuff     = 0;
-		}
+	}
 }
 const global_options = { ignore: '$global_ignored' };
 const ser = new yas.yaserializer([], global_options);
@@ -53,13 +53,13 @@ Decorators, custom serialization methods, in TypeScript:
 
 @yas.serializable
 class Test {
- 	field: string;
+	field: string;
 
- 	@yas.unserializable
- 	cache: any[];
+	@yas.unserializable
+	cache: any[];
 
- 	@yas.unserializable
- 	version: number;
+	@yas.unserializable
+	version: number;
 
 	constructor() {
 		this.field = 'Hello, world!';

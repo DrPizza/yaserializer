@@ -504,7 +504,8 @@ class yaserializer {
 		// as that doesn't get flattened into a string
 		if(!raw_name.match(/Symbol\..*/)
 		&& !raw_name.match(/get .*/)
-		&& !raw_name.match(/set .*/)) {
+		&& !raw_name.match(/set .*/)
+		&& (raw_body.match(/^function/) || raw_body.match(/^async function/))) {
 			const name = raw_name && raw_name !== 'anonymous' ? `const ${raw_name} = ` : '(';
 			const body = raw_body;
 			const tail = raw_name && raw_name !== 'anonymous' ? `; ${raw_name};` : ')';
@@ -517,7 +518,7 @@ class yaserializer {
 			function_decl = ' ';
 			break;
 		case 'AsyncFunction':
-			function_decl = 'async  ';
+			function_decl = 'async ';
 			break;
 		case 'GeneratorFunction':
 			function_decl = '* ';
