@@ -374,7 +374,7 @@ util.inspect.defaultOptions.colors = true;
 						['a' + 'b']: 6
 					};
 		
-					const reconstructed = reconstruct(ser, obj, true);
+					const reconstructed = reconstruct(ser, obj);
 		
 					expect(obj).to.be.deep.equal(reconstructed);
 					expect(obj[Symbol.toStringTag]).to.be.deep.equal(reconstructed[Symbol.toStringTag]);
