@@ -20,7 +20,7 @@ util.inspect.defaultOptions.colors = true;
 	packed_options.map(function (pack) {
 		const pack_by_default = pack;
 
-		function reconstruct(ser, obj, packed = pack_by_default, verbose = verbose_by_default) {
+		function reconstruct(ser, obj, verbose = verbose_by_default, packed = pack_by_default) {
 			let options = { use_packed_format: packed };
 			const serialized_form = ser.serialize(obj, options);
 			if (verbose) {
@@ -329,6 +329,21 @@ util.inspect.defaultOptions.colors = true;
 					expect(obj).to.deep.equal(reconstructed);
 				});
 		
+				it('should handle a POJO with getters and setters', function() {
+					const obj = {
+						my_value: 1,
+						get x() {
+							return this.my_value;
+						},
+						set x(val) {
+							this.my_value = val;
+						}
+					};
+					
+					const reconstructed = reconstruct(ser, obj);
+					expect(obj).to.deep.equal(reconstructed);
+				});
+		
 				it('should handle cyclic structures', function() {
 					const obj0 = { which: 0x0, parent: null, children: [] };
 					const obj1 = { which: 0x1, parent: obj0, children: [] };
@@ -372,6 +387,18 @@ util.inspect.defaultOptions.colors = true;
 				});
 				
 				it('should handle more cyclic structures', function() {
+					const obj = {
+						'foo': { 'b': { 'c': { 'd': {} } } },
+						'bar': { 'b': {} }
+					};
+					obj.foo.b.c.d = obj;
+					obj.bar.b = obj.foo.b;
+					
+					const reconstructed = reconstruct(ser, obj);
+					expect(obj).to.be.deep.equal(reconstructed);
+				});
+				
+				it('should handle yet more cyclic structures', function() {
 					const obj = [];
 					obj[0] = obj;
 					

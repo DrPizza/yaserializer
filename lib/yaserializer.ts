@@ -541,9 +541,9 @@ class yaserializer {
 		const keys = Array.prototype.concat(Object.getOwnPropertyNames(descs), Object.getOwnPropertySymbols(descs));
 		const key = keys[0];
 		const desc = descs[key];
-		if(Object.prototype.hasOwnProperty.call(desc, 'get')) {
+		if(Object.prototype.hasOwnProperty.call(desc, 'get') && desc['get']) {
 			return desc['get'] as Function;
-		} else if(Object.prototype.hasOwnProperty.call(desc, 'set')) {
+		} else if(Object.prototype.hasOwnProperty.call(desc, 'set') && desc['set']) {
 			return desc['set'] as Function;
 		} else {
 			return desc['value'] as Function;
