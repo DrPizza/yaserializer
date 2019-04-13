@@ -343,7 +343,43 @@ util.inspect.defaultOptions.colors = true;
 					const reconstructed = reconstruct(ser, obj);
 					expect(obj).to.deep.equal(reconstructed);
 				});
+
+				it('should preserve Symbol-identified properties', function() {
+					const global_symbol = Symbol.for('yas');
+					const obj = {
+						// regular property
+						[Symbol.species]: 1,
 		
+						// regular method
+						[Symbol.match]() {
+							return 2;
+						},
+		
+						// getter
+						get [Symbol.hasInstance]() {
+							return 3;
+						},
+		
+						// setter
+						set [global_symbol](x) {
+							console.log(x);
+						},
+		
+						// annoying function
+						async *[Symbol.unscopables]() {
+							yield 5;
+						},
+		
+						//computed
+						['a' + 'b']: 6
+					};
+		
+					const reconstructed = reconstruct(ser, obj, true);
+		
+					expect(obj).to.be.deep.equal(reconstructed);
+					expect(obj[Symbol.toStringTag]).to.be.deep.equal(reconstructed[Symbol.toStringTag]);
+				});
+
 				it('should handle cyclic structures', function() {
 					const obj0 = { which: 0x0, parent: null, children: [] };
 					const obj1 = { which: 0x1, parent: obj0, children: [] };
@@ -753,42 +789,6 @@ util.inspect.defaultOptions.colors = true;
 					expect(obj1).to.be.deep.equal(reconstructed1);
 					expect(obj2).to.be.deep.equal(reconstructed2);
 					expect(obj3).to.be.deep.equal(reconstructed3);
-				});
-		
-				it('should preserve Symbol-identified properties', function() {
-					const global_symbol = Symbol.for('yas');
-					const obj = {
-						// regular property
-						[Symbol.species]: 1,
-		
-						// regular method
-						[Symbol.match]() {
-							return 2;
-						},
-		
-						// getter
-						get [Symbol.hasInstance]() {
-							return 3;
-						},
-		
-						// setter
-						set [global_symbol](x) {
-							console.log(x);
-						},
-		
-						// annoying function
-						async *[Symbol.unscopables]() {
-							yield 5;
-						},
-		
-						//computed
-						['a' + 'b']: 6
-					};
-		
-					const reconstructed = reconstruct(ser, obj);
-		
-					expect(obj).to.be.deep.equal(reconstructed);
-					expect(obj[Symbol.toStringTag]).to.be.deep.equal(reconstructed[Symbol.toStringTag]);
 				});
 
 				it('should preserve arrays of objects', function() {
