@@ -1,6 +1,6 @@
 {
   "name": "yaserializer",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "JavaScript serialization library that can handle cycles and strives to preserve user-defined classes.",
   "main": "dist/yaserializer.js",
   "engines": {
